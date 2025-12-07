@@ -6,6 +6,7 @@ require google.golang.org/grpc v1.77.0
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
+	github.com/brianvoe/gofakeit v3.18.0+incompatible // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang-migrate/migrate/v4 v4.19.1 // indirect
 	github.com/ilyakaznacheev/cleanenv v1.5.0 // indirect
