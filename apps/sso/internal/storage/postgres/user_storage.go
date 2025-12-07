@@ -16,6 +16,8 @@ type PostgresUserStorage struct {
 	db *sql.DB
 }
 
+// NewUserStorage creates a new instance of PostgresUserStorage.
+// That used to interact with the user table.
 func NewUserStorage(db *sql.DB) *PostgresUserStorage {
 	return &PostgresUserStorage{
 		db: db,

@@ -49,6 +49,7 @@ func main() {
 	log.Info("application stopped")
 }
 
+// setupLogger creates a new logger instance based on the environment.
 func setupLogger(env string) *slog.Logger {
 	var log *slog.Logger
 	switch env {

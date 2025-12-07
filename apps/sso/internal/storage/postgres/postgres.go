@@ -39,6 +39,7 @@ func New(connString string) (*Storage, error) {
 	}, nil
 }
 
+// Close closes the database connection.
 func (s *Storage) Close() error {
 	return s.db.Close()
 }

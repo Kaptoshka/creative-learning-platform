@@ -19,6 +19,7 @@ type AuthUserStorageAdapter struct {
 	storage.RoleStorage
 }
 
+// New creates a new instance of the App struct.
 func New(
 	log *slog.Logger,
 	grpcPort int,

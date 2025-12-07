@@ -73,7 +73,8 @@ func New(
 	}
 }
 
-// Login checks if user with given credentials exists in the system
+// Login service layer functions that
+// checks if user with given credentials exists in the system
 //
 // If user exists, but password incorrect, returns ErrInvalidCredentials.
 // If user does not exist, returns ErrUserNotFound.
@@ -159,6 +160,7 @@ func (a *Auth) Login(
 	return token, nil
 }
 
+// RegisterNewUser service layer function that implements user registration
 func (a *Auth) RegisterNewUser(
 	ctx context.Context,
 	email string,

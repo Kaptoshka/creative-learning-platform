@@ -13,6 +13,8 @@ type PostgresRoleStorage struct {
 	db *sql.DB
 }
 
+// NewRoleStorage creates a new instance of PostgresRoleStorage.
+// That used to interact with the role and permission related tables.
 func NewRoleStorage(db *sql.DB) *PostgresRoleStorage {
 	return &PostgresRoleStorage{
 		db: db,

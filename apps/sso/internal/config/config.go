@@ -29,7 +29,8 @@ type Database struct {
 	SSLMode  string `yaml:"sslmode" env-default:"disable"`
 }
 
-// MustLoad loads the configuration from the specified path.
+// MustLoad retrive path to config
+// if there is no config path provided, it will panic.
 func MustLoad() *Config {
 	path := fetchConfigPath()
 	if path == "" {
@@ -39,6 +40,8 @@ func MustLoad() *Config {
 	return MustLoadByPath(path)
 }
 
+// MustLoadByPath loads the configuration from the specified path.
+// If config cannot be loaded, it will panic.
 func MustLoadByPath(path string) *Config {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		panic("config file does not exist" + path)

@@ -9,6 +9,8 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+// GenerateNewToken generates a new JWT token
+// for the given user, app, duration, role, and permission scope.
 func GenerateNewToken(
 	user models.User,
 	app models.App,

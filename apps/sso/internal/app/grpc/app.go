@@ -16,6 +16,7 @@ type App struct {
 	port       int
 }
 
+// New creates a new instance of the gRPC app struct.
 func New(
 	log *slog.Logger,
 	authService authgrpc.Auth,

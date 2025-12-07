@@ -24,6 +24,7 @@ const (
 	grpcHost = "localhost"
 )
 
+// New creates a new test suite.
 func New(t *testing.T) (context.Context, *Suite) {
 	t.Helper()
 	t.Parallel()

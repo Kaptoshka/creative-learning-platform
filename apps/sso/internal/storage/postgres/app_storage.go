@@ -14,6 +14,8 @@ type PostgresAppStorage struct {
 	db *sql.DB
 }
 
+// NewAppStorage creates a new instance of PostgresAppStorage.
+// That used to interact with the app table.
 func NewAppStorage(db *sql.DB) *PostgresAppStorage {
 	return &PostgresAppStorage{
 		db: db,

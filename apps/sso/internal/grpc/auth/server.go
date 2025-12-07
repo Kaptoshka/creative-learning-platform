@@ -43,6 +43,7 @@ func Register(gRPC *grpc.Server, auth Auth) {
 	ssov1.RegisterAuthServer(gRPC, &serverAPI{auth: auth})
 }
 
+// Login implements login of the user in SSO
 func (s *serverAPI) Login(
 	ctx context.Context,
 	req *ssov1.LoginRequest,
@@ -65,6 +66,7 @@ func (s *serverAPI) Login(
 	}, nil
 }
 
+// Register implements registration of the user in SSO
 func (s *serverAPI) Register(
 	ctx context.Context,
 	req *ssov1.RegisterRequest,
@@ -95,6 +97,9 @@ func (s *serverAPI) Register(
 	}, nil
 }
 
+// validateLogin validates the login request
+// Email, password and AppId must be provided.
+// If not it returns an error.
 func validateLogin(req *ssov1.LoginRequest) error {
 	if req.GetEmail() == "" {
 		return status.Error(codes.InvalidArgument, "email is required")
@@ -111,6 +116,9 @@ func validateLogin(req *ssov1.LoginRequest) error {
 	return nil
 }
 
+// validateRegister validates the register request
+// Email, password, first_name, last_name must be provided.
+// If not it returns an error.
 func validateRegister(req *ssov1.RegisterRequest) error {
 	if req.GetEmail() == "" {
 		return status.Error(codes.InvalidArgument, "email is required")
