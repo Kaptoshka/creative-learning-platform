@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package auth;
 
-option go_package = "kaptoshka.sso.v1;ssov1";
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/sso/v1;ssov1";
 
 service Auth {
     rpc Register(RegisterRequest) returns (RegisterResponse);
@@ -13,6 +13,9 @@ service Auth {
 message RegisterRequest {
     string email = 1;
     string password = 2;
+    string first_name = 3;
+    string last_name = 4;
+    string middle_name = 5;
 }
 
 message RegisterResponse {

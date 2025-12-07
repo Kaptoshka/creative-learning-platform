@@ -1,0 +1,14 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/Kaptoshka/creative-learning-platform/libs/gen/go
+    except:
+      - buf.build/googleapis/googleapis
+plugins:
+  - plugin: go
+    out: libs/gen/go
+    opt: paths=source_relative
+  - plugin: go-grpc
+    out: libs/gen/go
+    opt: paths=source_relative
