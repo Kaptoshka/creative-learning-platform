@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package tasks;
+
+import "tasks/v1/models.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
+
+service Tasks {
+    rpc CreateAssignment(CreateAssignmentRequest) returns (CreateAssignmentResponse);
+    rpc GetAssignment(GetAssignmentRequest) returns (GetAssignmentResponse);
+    rpc ProvideFeedback(ProvideFeedbackRequest) returns (ProvideFeedbackResponse);
+
+    rpc ListAssignments(ListAssignmentsRequest) returns (ListAssignmentsResponse);
+    rpc StartAssignment(StartAssignmentRequest) returns (StartAssignmentResponse);
+    rpc SubmitAssignment(SubmitAssignmentRequest) returns (SubmitAssignmentResponse);
+}
+
+message CreateAssignmentRequest {
+    string title = 1;
+    google.protobuf.Struct payload = 2;
+    google.protobuf.Timestamp deadline = 3;
+    repeated int64 target_students_id = 4;
+}
+
+message CreateAssignmentResponse {
+    int64 assignment_id = 1;
+}
+
+message GetAssignmentRequest {
+    int64 assignment_id = 1;
+}
+
+message GetAssignmentResponse {
+    Assignment assignment = 1;
+    Submission submission = 2;
+}
+
+message ProvideFeedbackRequest {
+    int64 assignment_id = 1;
+    string feedback = 2;
+}
+
+message ProvideFeedbackResponse {
+    bool success = 1;
+}
+
+message ListAssignmentsRequest {
+    int32 page_size = 1;
+    string page_token = 2;
+    AssignmentFilter filter = 3;
+}
+
+message ListAssignmentsResponse {
+    repeated Assignment items = 1;
+    string next_page_token = 2;
+    int32 total_count = 3;
+}
+
+message StartAssignmentRequest {
+    int64 assignment_id = 1;
+}
+
+message StartAssignmentResponse {
+    int64 submission_id = 1;
+    google.protobuf.Timestamp start_time = 2;
+    google.protobuf.Timestamp deadline = 3;
+}
+
+message SubmitAssignmentRequest {
+    int64 submission_id = 1;
+    google.protobuf.Struct payload = 3;
+}
+
+message SubmitAssignmentResponse {
+    int64 submission_id = 1;
+    SubmissionStatus status = 2;
+}

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package tasks;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
+
+enum SubmissionStatus {
+    SUBMISSION_STATUS_UNSPECIFIED = 0;
+    SUBMISSION_STATUS_IN_PROGRESS = 1;
+    SUBMISSION_STATUS_SUBMITTED = 2;
+    SUBMISSION_STATUS_FEEDBACK = 3;
+}
+
+message Assignment {
+    string id = 1;
+    int64 teacher_id = 2;
+    string title = 3;
+    google.protobuf.Struct content = 4;
+    google.protobuf.Timestamp deadline = 5;
+}
+
+message AssignmentTarget {
+    int64 assignment_id = 1;
+    int64 student_id = 2;
+}
+
+message Submission {
+    int64 id = 1;
+    int64 assignment_id = 2;
+    int64 student_id = 3;
+    SubmissionStatus status = 4;
+    google.protobuf.Timestamp started_at = 5;
+    google.protobuf.Timestamp finished_at = 6;
+    google.protobuf.Struct content = 7;
+    string teacher_feedback = 8;
+}
+
+message AssignmentFilter {
+    repeated int64 teacher_ids = 1;
+    int64 student_id = 2;
+    repeated int64 assignment_ids = 3;
+}
