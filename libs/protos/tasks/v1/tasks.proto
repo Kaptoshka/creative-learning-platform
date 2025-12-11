@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package tasks;
+
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
+
+service Tasks {
+    rpc CreateSubmission() returns ();
+    rpc GetSubmission() returns ();
+    rpc UpdateSubmission() returns ();
+    rpc CreateAssignment() returns ();
+    rpc GetAssignment(AssignmentRequest) returns (AssignmentResponse);
+    rpc UpdateAssignment() returns ();
+}
+
+message AssignmentRequest {
+
+}

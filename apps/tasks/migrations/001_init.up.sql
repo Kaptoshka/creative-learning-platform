@@ -1,0 +1,28 @@
+CREATE TABLE IF NOT EXISTS assignments (
+	id SERIAL PRIMARY KEY,
+	title VARCHAR(255) NOT NULL,
+	content JSONB NOT NULL,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	deadline TIMESTAMP NOT NULL,
+	teacher_id INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS submissions (
+	id SERIAL PRIMARY KEY,
+	assignment_id integer NOT NULL,
+	student_id INTEGER NOT NULL,
+	content JSONB NOT NULL,
+	started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	status VARCHAR(255) NOT NULL,
+	feedback VARCHAR(255),
+	FOREIGN KEY (assignment_id) REFERENCES assignments(id),
+);
+
+CREATE TABLE IF NOT EXISTS assignment_targets (
+    id SERIAL PRIMARY KEY,
+    assignment_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    FOREIGN KEY (assignment_id) REFERENCES assignments(id),
+);
