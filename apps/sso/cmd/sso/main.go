@@ -5,9 +5,10 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"syscall"
+
 	"sso/internal/app"
 	"sso/internal/config"
-	"syscall"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 func main() {
 	cfg := config.MustLoad()
 
-	log := setupLogger(envLocal)
+	log := setupLogger(cfg.Env)
 
 	log.Info("starting application")
 
