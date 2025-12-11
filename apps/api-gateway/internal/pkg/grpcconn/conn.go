@@ -28,7 +28,6 @@ func (c *GRPCClient[T]) Close() error {
 }
 
 func New[T any](
-	ctx context.Context,
 	log *slog.Logger,
 	cfg *config.GRPCClient,
 	maker func(grpc.ClientConnInterface) T,
