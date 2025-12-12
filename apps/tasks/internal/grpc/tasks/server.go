@@ -8,14 +8,21 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
 )
 
 type Tasks interface {
-	SubmissionByID(
+	SubmissionByAssignmentID(
 		ctx context.Context,
-		submissionID int64,
+		assignmentID int64,
+	) ([]models.Assignment, error)
+	SubmissionByAssignmentIDAndStudentID(
+		ctx context.Context,
+		assignmentID int64,
+		studentID int64,
 	) (*models.Submission, error)
 	AssignmentByID(
 		ctx context.Context,
@@ -40,6 +47,30 @@ func (s *serverAPI) Assignment(
 		return nil, err
 	}
 
+	assignment, err := s.tasks.AssignmentByID(
+		ctx,
+		req.GetAssignmentId(),
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	protoContent, err := structpb.NewStruct(assignment.Content)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	protoDeadline := timestamppb.New(assignment.Deadline)
+
+	return &tasksv1.GetAssignmentResponse{
+		Assignment: &tasksv1.Assignment{
+			Id:        assignment.ID,
+			TeacherId: assignment.TeacherID,
+			Title:     assignment.Title,
+			Content:   protoContent,
+			Deadline:  protoDeadline,
+		},
+	}, nil
 }
 
 func validateAssignment(req *tasksv1.GetAssignmentRequest) error {
