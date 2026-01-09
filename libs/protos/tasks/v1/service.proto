@@ -5,76 +5,114 @@ package tasks;
 import "tasks/v1/models.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
 
 service Tasks {
+    // CRUD workflow with assignments
     rpc CreateAssignment(CreateAssignmentRequest) returns (CreateAssignmentResponse);
-    rpc GetAssignment(GetAssignmentRequest) returns (GetAssignmentResponse);
-    rpc ProvideFeedback(ProvideFeedbackRequest) returns (ProvideFeedbackResponse);
-
     rpc ListAssignments(ListAssignmentsRequest) returns (ListAssignmentsResponse);
+    rpc UpdateAssignment(UpdateAssignmentRequest) returns (google.protobuf.Empty);
+    rpc DeleteAssignment(DeleteAssignmentRequest) returns (google.protobuf.Empty);
+
+    // Workflow of student with assignment
+    rpc GetStudentAssignment(GetStudentAssignmentRequest) returns (GetStudentAssignmentResponse);
     rpc StartAssignment(StartAssignmentRequest) returns (StartAssignmentResponse);
     rpc SubmitAssignment(SubmitAssignmentRequest) returns (SubmitAssignmentResponse);
+    rpc UpdateSubmission(UpdateSubmissionRequest) returns (google.protobuf.Empty);
+    rpc DeleteSubmission(DeleteSubmissionRequest) returns (google.protobuf.Empty);
+
+    // Workflow of teacher with assignments/submissions
+    rpc GetTeacherAssignment(GetTeacherAssignmentRequest) returns (GetTeacherAssignmentResponse);
+    rpc ProvideFeedback(ProvideFeedbackRequest) returns (google.protobuf.Empty);
+    rpc ReturnSubmission(ReturnSubmissionRequest) returns (google.protobuf.Empty);
 }
 
 message CreateAssignmentRequest {
-    string title = 1;
-    google.protobuf.Struct payload = 2;
-    google.protobuf.Timestamp deadline = 3;
-    repeated int64 target_students_id = 4;
+    string id = 1;
+    string title = 2;
+    AssignmentWidget widget = 3;
+    google.protobuf.Timestamp due_date = 4;
 }
 
 message CreateAssignmentResponse {
-    int64 assignment_id = 1;
-}
-
-message GetAssignmentRequest {
-    int64 assignment_id = 1;
-}
-
-message GetAssignmentResponse {
-    Assignment assignment = 1;
-    Submission submission = 2;
-}
-
-message ProvideFeedbackRequest {
-    int64 assignment_id = 1;
-    string feedback = 2;
-}
-
-message ProvideFeedbackResponse {
-    bool success = 1;
+    string id = 1;
 }
 
 message ListAssignmentsRequest {
     int32 page_size = 1;
-    string page_token = 2;
-    AssignmentFilter filter = 3;
+    string pate_token = 2;
 }
 
 message ListAssignmentsResponse {
-    repeated Assignment items = 1;
+    repeated StudentAssignmentItem items = 1;
     string next_page_token = 2;
-    int32 total_count = 3;
+}
+
+message GetTeacherAssignmentRequest {
+    string id = 1;
+}
+
+message GetTeacherAssignmentResponse {
+    Assignment assignment = 1;
+}
+
+message UpdateAssignmentRequest {
+    string id = 1;
+    string title = 2;
+    AssignmentWidget widget = 3;
+    google.protobuf.Timestamp due_date = 4;
+}
+
+message DeleteAssignmentRequest {
+    string id = 1;
+}
+
+message GetStudentAssignmentRequest {
+    string id = 1;
+}
+
+message GetStudentAssignmentResponse {
+    StudentAssignment assignment = 1;
 }
 
 message StartAssignmentRequest {
-    int64 assignment_id = 1;
+    string id = 1;
 }
 
 message StartAssignmentResponse {
-    int64 submission_id = 1;
-    google.protobuf.Timestamp start_time = 2;
-    google.protobuf.Timestamp deadline = 3;
+    string id = 1;
 }
 
 message SubmitAssignmentRequest {
-    int64 submission_id = 1;
-    google.protobuf.Struct payload = 3;
+    string id = 1;
+    string assignment_id = 2;
+    SubmissionStatus status = 3;
+    google.protobuf.Struct payload = 4;
 }
 
 message SubmitAssignmentResponse {
-    int64 submission_id = 1;
+    string id = 1;
+}
+
+message UpdateSubmissionRequest {
+    string submission_id = 1;
+    google.protobuf.Struct payload = 4;
+}
+
+message DeleteSubmissionRequest {
+    string submission_version_id = 1;
+}
+
+message ProvideFeedbackRequest {
+    string id = 1;
+    string feedback = 2;
+}
+
+message ReturnSubmissionRequest {
+    string submission_version_id = 1;
     SubmissionStatus status = 2;
+    string feedback = 3;
 }

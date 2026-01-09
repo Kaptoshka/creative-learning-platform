@@ -9,37 +9,63 @@ option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go
 
 enum SubmissionStatus {
     SUBMISSION_STATUS_UNSPECIFIED = 0;
-    SUBMISSION_STATUS_IN_PROGRESS = 1;
-    SUBMISSION_STATUS_SUBMITTED = 2;
-    SUBMISSION_STATUS_FEEDBACK = 3;
+    SUBMISSION_STATUS_NOT_STARTED = 1;
+    SUBMISSION_STATUS_IN_PROGRESS = 2;
+    SUBMISSION_STATUS_SUBMITTED = 3;
+    SUBMISSION_STATUS_GRADED = 4;
+    SUBMISSION_STATUS_RETURNED = 5;
+}
+
+message StudentAssignment {
+    Assignment assignment = 1;
+    Submission submission = 2;
+    string feedback = 3;
 }
 
 message Assignment {
-    int64 id = 1;
-    int64 teacher_id = 2;
-    string title = 3;
-    google.protobuf.Struct content = 4;
-    google.protobuf.Timestamp deadline = 5;
+    string id = 1;
+    string creator_id = 2;
+    string creator_name = 3
+    string student_id = 4;
+
+    AssignmentWidget widget = 5;
+
+    google.protobuf.Timestamp due_date = 6;
 }
 
-message AssignmentTarget {
-    int64 assignment_id = 1;
-    int64 student_id = 2;
+message AssignmentWidget {
+    string type = 1;
+    string version = 2;
+
+    google.protobuf.Struct config = 3;
 }
 
 message Submission {
-    int64 id = 1;
-    int64 assignment_id = 2;
-    int64 student_id = 3;
+    string id = 1;
+    string assignment_id = 2;
+    string student_id = 3;
+
     SubmissionStatus status = 4;
-    google.protobuf.Timestamp started_at = 5;
-    google.protobuf.Timestamp finished_at = 6;
-    google.protobuf.Struct content = 7;
-    string teacher_feedback = 8;
+    SubmissionVersion current_version = 5;
+
+    google.protobuf.Timestamp started_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
 }
 
-message AssignmentFilter {
-    repeated int64 teacher_ids = 1;
-    int64 student_id = 2;
-    repeated int64 assignment_ids = 3;
+message SubmissionVersion {
+    string id = 1;
+    int32 version_number = 2;
+
+    google.protobuf.Struct payload = 3;
+
+    // cколько времени заняло выполнение задания
+    map<string, string> metadata = 4;
+}
+
+message StudentAssignmentItem {
+    string assignment_id = 1;
+    string title = 2;
+    SubmissionStatus status = 3;
+
+    string feedback = 4;
 }
