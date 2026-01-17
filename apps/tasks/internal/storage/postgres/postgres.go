@@ -4,11 +4,17 @@ import (
 	"database/sql"
 	"fmt"
 
+	"tasks/internal/storage"
+	"tasks/internal/storage/postgres/assignment"
+	"tasks/internal/storage/postgres/submission"
+
 	_ "github.com/jackc/pgx/v5"
 )
 
 type Storage struct {
 	db *sql.DB
+	storage.AssignmentStorage
+	storage.SubmissionStorage
 }
 
 func New(connString string) (*Storage, error) {
@@ -25,7 +31,11 @@ func New(connString string) (*Storage, error) {
 		return nil, fmt.Errorf("%s: %v", op, err)
 	}
 
-	return &Storage{db: db}, nil
+	return &Storage{
+		db:                db,
+		AssignmentStorage: assignment.New(db),
+		SubmissionStorage: submission.New(db),
+	}, nil
 }
 
 func (s *Storage) Close() error {

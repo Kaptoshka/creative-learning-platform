@@ -11,17 +11,17 @@ import (
 	"tasks/internal/storage"
 )
 
-type PostgresSubmissionStorage struct {
+type SubmissionRepo struct {
 	db *sql.DB
 }
 
-// New creates a new PostgresSubmissionStorage instance.
+// New creates a new SubmissionRepo instance.
 // That used to interact with the submissions table.
-func New(db *sql.DB) *PostgresSubmissionStorage {
-	return &PostgresSubmissionStorage{db: db}
+func New(db *sql.DB) *SubmissionRepo {
+	return &SubmissionRepo{db: db}
 }
 
-func (s *PostgresSubmissionStorage) SubmissionByAssignmentID(
+func (r *SubmissionRepo) SubmissionByAssignmentID(
 	ctx context.Context,
 	assignmentID int64,
 ) ([]models.Submission, error) {
@@ -33,7 +33,7 @@ func (s *PostgresSubmissionStorage) SubmissionByAssignmentID(
 		WHERE assignment_id = $1
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, assignmentID)
+	rows, err := r.db.QueryContext(ctx, query, assignmentID)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", op, err)
 	}
@@ -66,7 +66,7 @@ func (s *PostgresSubmissionStorage) SubmissionByAssignmentID(
 	return submissions, nil
 }
 
-func (s *PostgresSubmissionStorage) SubmissionByAssignmentIDAndStudentID(
+func (r *SubmissionRepo) SubmissionByAssignmentIDAndStudentID(
 	ctx context.Context,
 	assignmentID int64,
 	studentID int64,
@@ -79,7 +79,7 @@ func (s *PostgresSubmissionStorage) SubmissionByAssignmentIDAndStudentID(
 		WHERE assignment_id = $1 AND student_id = $2
 	`
 
-	res := s.db.QueryRowContext(ctx, query, assignmentID, studentID)
+	res := r.db.QueryRowContext(ctx, query, assignmentID, studentID)
 
 	var submission models.Submission
 	var contentBytes []byte
