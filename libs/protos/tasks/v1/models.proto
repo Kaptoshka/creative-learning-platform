@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package tasks;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
+
+enum SubmissionStatus {
+    SUBMISSION_STATUS_UNSPECIFIED = 0;
+    SUBMISSION_STATUS_NOT_STARTED = 1;
+    SUBMISSION_STATUS_IN_PROGRESS = 2;
+    SUBMISSION_STATUS_SUBMITTED = 3;
+    SUBMISSION_STATUS_GRADED = 4;
+    SUBMISSION_STATUS_RETURNED = 5;
+}
+
+message StudentAssignment {
+    Assignment assignment = 1;
+    Submission submission = 2;
+    string feedback = 3;
+}
+
+message Assignment {
+    string id = 1;
+    string creator_id = 2;
+    string creator_name = 3
+    string student_id = 4;
+
+    AssignmentWidget widget = 5;
+
+    google.protobuf.Timestamp due_date = 6;
+}
+
+message AssignmentWidget {
+    string type = 1;
+    string version = 2;
+
+    google.protobuf.Struct config = 3;
+}
+
+message Submission {
+    string id = 1;
+    string assignment_id = 2;
+    string student_id = 3;
+
+    SubmissionStatus status = 4;
+    SubmissionVersion current_version = 5;
+
+    google.protobuf.Timestamp started_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
+}
+
+message SubmissionVersion {
+    string id = 1;
+    int32 version_number = 2;
+
+    google.protobuf.Struct payload = 3;
+
+    // cколько времени заняло выполнение задания
+    map<string, string> metadata = 4;
+}
+
+message StudentAssignmentItem {
+    string assignment_id = 1;
+    string title = 2;
+    SubmissionStatus status = 3;
+
+    string feedback = 4;
+}
