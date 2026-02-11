@@ -2,117 +2,193 @@ syntax = "proto3";
 
 package tasks;
 
-import "tasks/v1/models.proto";
-import "google/protobuf/timestamp.proto";
-import "google/protobuf/struct.proto";
+import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "tasks/v1/models.proto";
 
 option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
 
 service Tasks {
-    // CRUD workflow with assignments
-    rpc CreateAssignment(CreateAssignmentRequest) returns (CreateAssignmentResponse);
-    rpc ListAssignments(ListAssignmentsRequest) returns (ListAssignmentsResponse);
-    rpc UpdateAssignment(UpdateAssignmentRequest) returns (google.protobuf.Empty);
-    rpc DeleteAssignment(DeleteAssignmentRequest) returns (google.protobuf.Empty);
+  // --------------------------------
+  // Teacher: Template management
+  // --------------------------------
 
-    // Workflow of student with assignment
-    rpc GetStudentAssignment(GetStudentAssignmentRequest) returns (GetStudentAssignmentResponse);
-    rpc StartAssignment(StartAssignmentRequest) returns (StartAssignmentResponse);
-    rpc SubmitAssignment(SubmitAssignmentRequest) returns (SubmitAssignmentResponse);
-    rpc UpdateSubmission(UpdateSubmissionRequest) returns (google.protobuf.Empty);
-    rpc DeleteSubmission(DeleteSubmissionRequest) returns (google.protobuf.Empty);
+  // Create
+  rpc CreateAssignment(CreateAssignmentRequest) returns (CreateAssignmentResponse);
 
-    // Workflow of teacher with assignments/submissions
-    rpc GetTeacherAssignment(GetTeacherAssignmentRequest) returns (GetTeacherAssignmentResponse);
-    rpc ProvideFeedback(ProvideFeedbackRequest) returns (google.protobuf.Empty);
-    rpc ReturnSubmission(ReturnSubmissionRequest) returns (google.protobuf.Empty);
+  // Update template. If student already started assignment, it will not be updated.
+  rpc UpdateAssignment(UpdateAssignmentRequest) returns (AssignmentTemplate);
+
+  // Delete template
+  rpc DeleteAssignment(DeleteAssignmentRequest) returns (google.protobuf.Empty);
+
+  // Retrieve details of an assignment
+  rpc GetAssignment(GetAssignmentRequest) returns (GetAssignmentResponse);
+
+  // --------------------------------
+  // Teacher: Provide feedback for student submissions and retrieve list of submissions and assignments
+  // --------------------------------
+
+  rpc ListAssignments(ListAssignmentsRequest) returns (ListAssignmentsResponse);
+
+  rpc ListAssignmentSubmissions(ListAssignmentSubmissionsRequest) returns (ListAssignmentSubmissionsResponse);
+
+  rpc GetStudentSubmission(GetStudentSubmissionRequest) returns (GetStudentSubmissionResponse);
+
+  rpc ProvideFeedback(ProvideFeedbackRequest) returns (google.protobuf.Empty);
+
+  // --------------------------------
+  // Student: Complete assignment workflow
+  // --------------------------------
+
+  // Workflow of student with assignment
+  rpc ListMyAssignments(ListMyAssignmentsRequest) returns (ListMyAssignmentsResponse);
+
+  rpc StartAssignment(StartAssignmentRequest) returns (StartAssignmentResponse);
+
+  rpc SaveAssignmentDraft(SaveAssignmentDraftRequest) returns (SaveAssignmentDraftResponse);
+
+  rpc SubmitAssignment(SubmitAssignmentRequest) returns (SubmitAssignmentResponse);
 }
 
+// --- Messages ---
+
 message CreateAssignmentRequest {
-    string id = 1;
-    string title = 2;
-    AssignmentWidget widget = 3;
-    google.protobuf.Timestamp due_date = 4;
+  string title = 1;
+  string description = 2;
+
+  string widget_id = 3;
+  google.protobuf.Struct widget_config = 4;
+
+  google.protobuf.Timestamp due_date = 5;
+  repeated AssignmentTarget targets = 6;
 }
 
 message CreateAssignmentResponse {
-    string id = 1;
-}
-
-message ListAssignmentsRequest {
-    int32 page_size = 1;
-    string pate_token = 2;
-}
-
-message ListAssignmentsResponse {
-    repeated StudentAssignmentItem items = 1;
-    string next_page_token = 2;
-}
-
-message GetTeacherAssignmentRequest {
-    string id = 1;
-}
-
-message GetTeacherAssignmentResponse {
-    Assignment assignment = 1;
+  string id = 1;
 }
 
 message UpdateAssignmentRequest {
-    string id = 1;
-    string title = 2;
-    AssignmentWidget widget = 3;
-    google.protobuf.Timestamp due_date = 4;
+  string assignment_id = 1;
+
+  AssignmentTemplate template = 2;
+
+  google.protobuf.FieldMask update_mask = 3;
+
+  repeated AssignmentTarget targets = 4;
 }
 
 message DeleteAssignmentRequest {
-    string id = 1;
+  string id = 1;
 }
 
-message GetStudentAssignmentRequest {
-    string id = 1;
+message GetAssignmentRequest {
+  string id = 1;
 }
 
-message GetStudentAssignmentResponse {
-    StudentAssignment assignment = 1;
+message GetAssignmentResponse {
+  AssignmentTemplate template = 1;
+  repeated AssignmentTarget targets = 2;
+}
+
+message ListAssignmentsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+
+  string creator_id = 3;
+}
+
+message ListAssignmentsResponse {
+  repeated AssignmentTemplateLight items = 1;
+  string next_page_token = 2;
+}
+
+// --- Student Requests ---
+
+message ListMyAssignmentsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  SubmissionStatus status_filter = 3;
+}
+
+message ListMyAssignmentsResponse {
+  message StudentItem {
+    AssignmentTemplateLight template = 1;
+    SubmissionStatus status = 2;
+    bool has_feedback = 3;
+  }
+  repeated StudentItem items = 1;
+  string next_page_token = 2;
 }
 
 message StartAssignmentRequest {
-    string id = 1;
+  string template_id = 1;
 }
 
 message StartAssignmentResponse {
-    string id = 1;
+  string submission_id = 1;
+  google.protobuf.Struct started_at = 2;
+}
+
+message SaveAssignmentDraftRequest {
+  string submission_id = 1;
+  google.protobuf.Struct payload = 2;
+
+  google.protobuf.Duration time_spent = 3;
+}
+
+message SaveAssignmentDraftResponse {
+  string version_id = 1;
+  google.protobuf.Timestamp saved_at = 2;
 }
 
 message SubmitAssignmentRequest {
-    string id = 1;
-    string assignment_id = 2;
-    SubmissionStatus status = 3;
-    google.protobuf.Struct payload = 4;
+  string submission_id = 1;
+  google.protobuf.Struct payload = 2;
+  google.protobuf.Duration time_spent = 3;
 }
 
 message SubmitAssignmentResponse {
-    string id = 1;
+  string version_id = 1;
+  SubmissionStatus status = 2;
 }
 
-message UpdateSubmissionRequest {
-    string submission_id = 1;
-    google.protobuf.Struct payload = 4;
+// --- Grading Requests ---
+
+message ListAssignmentSubmissionsRequest {
+  string template_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  SubmissionStatus status_filter = 4;
 }
 
-message DeleteSubmissionRequest {
-    string submission_version_id = 1;
+message ListAssignmentSubmissionsResponse {
+  message SubmissionItem {
+    Submission submission = 1;
+    string student_id = 2;
+  }
+  repeated SubmissionItem items = 1;
+  string next_page_token = 2;
+}
+
+message GetStudentSubmissionRequest {
+  string submission_id = 1;
+}
+
+message GetStudentSubmissionResponse {
+  AssignmentTemplate template = 1;
+  Submission submission = 2;
+  repeated SubmissionVersion history = 3;
+  repeated Feedback feedback = 4;
 }
 
 message ProvideFeedbackRequest {
-    string id = 1;
-    string feedback = 2;
-}
-
-message ReturnSubmissionRequest {
-    string submission_version_id = 1;
-    SubmissionStatus status = 2;
-    string feedback = 3;
+  string submission_id = 1;
+  string version_id = 2;
+  string text_content = 3;
+  google.protobuf.Struct payload = 4;
+  bool is_published = 5;
 }

@@ -2,10 +2,14 @@ syntax = "proto3";
 
 package tasks;
 
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/duration.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
+
+// --- Enums ---
 
 enum SubmissionStatus {
   SUBMISSION_STATUS_UNSPECIFIED = 0;
@@ -16,40 +20,57 @@ enum SubmissionStatus {
   SUBMISSION_STATUS_RETURNED = 5;
 }
 
-message StudentAssignment {
-  Assignment assignment = 1;
-  Submission submission = 2;
-  string feedback = 3;
+// --- Domain Models ---
+
+message Widget {
+  string id = 1;
+  string type = 2;
+  int32 version = 3;
+
+  google.protobuf.Struct config_schema = 4;
+  google.protobuf.Struct submission_schema = 5;
 }
 
-message Assignment {
+message AssignmentTemplate {
   string id = 1;
   string creator_id = 2;
-  string creator_name = 3;
-  string student_id = 4;
+  string title = 3;
+  string description = 4;
 
-  AssignmentWidget widget = 5;
+  string widget_id = 5;
+  google.protobuf.Struct widget_config = 6;
 
-  google.protobuf.Timestamp due_date = 6;
+  google.protobuf.Timestamp due_date = 7;
+  google.protobuf.Timestamp cutoff_date = 8;
+
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
 }
 
-message AssignmentWidget {
-  string type = 1;
-  string version = 2;
+message AssignmentTemplateLight {
+  string id = 1;
+  string title = 2;
+  string widget_type = 3;
+  google.protobuf.Timestamp due_date = 4;
+}
 
-  google.protobuf.Struct config = 3;
+message AssignmentTarget {
+  oneof target {
+    string group_id = 1;
+    string student_id = 2;
+  }
 }
 
 message Submission {
   string id = 1;
-  string assignment_id = 2;
+  string template_id = 2;
   string student_id = 3;
 
   SubmissionStatus status = 4;
-  SubmissionVersion current_version = 5;
 
-  google.protobuf.Timestamp started_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.Timestamp started_at = 5;
+  google.protobuf.Timestamp submitted_at = 6;
+  SubmissionVersion latest_version = 7;
 }
 
 message SubmissionVersion {
@@ -58,14 +79,20 @@ message SubmissionVersion {
 
   google.protobuf.Struct payload = 3;
 
-  // cколько времени заняло выполнение задания
-  map<string, string> metadata = 4;
+  google.protobuf.Duration time_spent_seconds = 4;
+
+  bool is_autosave = 5;
+  google.protobuf.Timestamp created_at = 6;
 }
 
-message StudentAssignmentItem {
-  string assignment_id = 1;
-  string title = 2;
-  SubmissionStatus status = 3;
+message Feedback {
+  string id = 1;
+  string version_id = 2;
+  string grader_id = 3;
 
-  string feedback = 4;
+  string text_content = 4;
+  google.protobuf.Struct payload = 5;
+
+  bool is_published = 6;
+  google.protobuf.Timestamp created_at = 7;
 }
