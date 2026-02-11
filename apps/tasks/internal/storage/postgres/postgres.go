@@ -1,18 +1,18 @@
 package postgres
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 
 	"tasks/internal/storage"
 	"tasks/internal/storage/postgres/assignment"
 	"tasks/internal/storage/postgres/submission"
 
-	_ "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Storage struct {
-	db *sql.DB
+	pool *pgxpool.Pool
 	storage.AssignmentStorage
 	storage.SubmissionStorage
 }
@@ -20,30 +20,33 @@ type Storage struct {
 func New(connString string) (*Storage, error) {
 	const op = "storage.postgres.New"
 
-	db, err := sql.Open("pgx", connString)
+	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", op, err)
 	}
-	defer db.Close()
 
-	err = db.Ping()
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
+		return nil, fmt.Errorf("%s: %v", op, err)
+	}
+
+	if err := pool.Ping(context.Background()); err != nil {
+		pool.Close()
 		return nil, fmt.Errorf("%s: %v", op, err)
 	}
 
 	return &Storage{
-		db:                db,
-		AssignmentStorage: assignment.New(db),
-		SubmissionStorage: submission.New(db),
+		pool:              pool,
+		AssignmentStorage: assignment.New(pool),
+		SubmissionStorage: submission.New(pool),
 	}, nil
 }
 
 func (s *Storage) Close() error {
 	const op = "storage.postgres.Close"
 
-	err := s.db.Close()
-	if err != nil {
-		return fmt.Errorf("%s: %v", op, err)
+	if s.pool != nil {
+		s.pool.Close()
 	}
 
 	return nil
