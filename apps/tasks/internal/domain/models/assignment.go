@@ -23,7 +23,7 @@ type AssignmentTarget struct {
 	ID         uuid.UUID  `db:"id"`
 	TemplateID uuid.UUID  `db:"template_id"`
 	GroupID    *uuid.UUID `db:"group_id"`
-	StudentId  *uuid.UUID `db:"student_id"`
+	StudentID  *uuid.UUID `db:"student_id"`
 	CreatedAt  time.Time  `db:"created_at"`
 	UpdatedAt  time.Time  `db:"updated_at"`
 }
