@@ -19,8 +19,7 @@ CREATE TABLE IF NOT EXISTS assignment_templates (
     widget_id UUID NOT NULL REFERENCES widgets(id),
     widget_config JSONB NOT NULL DEFAULT '{}',
 
-    due_date TIMESTAMP NOT NULL,    -- Soft deadline
-    cutoff_date TIMESTAMP NOT NULL, -- Hard deadline
+    due_date TIMESTAMP NOT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

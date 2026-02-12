@@ -41,7 +41,6 @@ message AssignmentTemplate {
   google.protobuf.Struct widget_config = 6;
 
   google.protobuf.Timestamp due_date = 7;
-  google.protobuf.Timestamp cutoff_date = 8;
 
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
