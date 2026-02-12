@@ -2,9 +2,11 @@ package tasks
 
 import (
 	"context"
+	"errors"
 
 	"tasks/internal/domain/models"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,6 +21,7 @@ type Assignments interface {
 		ctx context.Context,
 		assignmentID string,
 		updates map[string]any,
+		targets []*models.AssignmentTarget,
 	) (*models.AssignmentTemplate, error)
 }
 
@@ -67,7 +70,18 @@ func (s *serverAPI) UpdateAssignment(
 		}
 	}
 
-	updateModel, err := s.assignments.Update(ctx, req.AssignmentId, updates)
+	targets := make([]*models.AssignmentTarget, len(req.Targets))
+
+	for _, trg := range req.Targets {
+		target, err := processTarget(trg)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+
+		targets = append(targets, target)
+	}
+
+	updateModel, err := s.assignments.Update(ctx, req.AssignmentId, updates, targets)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -88,4 +102,33 @@ func (s *serverAPI) UpdateAssignment(
 		CreatedAt:    timestamppb.New(updateModel.CreatedAt),
 		UpdatedAt:    timestamppb.New(updateModel.UpdatedAt),
 	}, nil
+}
+
+func processTarget(t *tasksv1.AssignmentTarget) (*models.AssignmentTarget, error) {
+	switch v := t.GetTarget().(type) {
+	case *tasksv1.AssignmentTarget_GroupId:
+		groupID, err := uuid.Parse(v.GroupId)
+		if err != nil {
+			return nil, errors.New("invalid group ID")
+		}
+
+		return &models.AssignmentTarget{
+			GroupID: &groupID,
+		}, nil
+	case *tasksv1.AssignmentTarget_StudentId:
+		studentID, err := uuid.Parse(v.StudentId)
+		if err != nil {
+			return nil, errors.New("invalid student ID")
+		}
+
+		return &models.AssignmentTarget{
+			StudentID: &studentID,
+		}, nil
+
+	case nil:
+		return nil, nil
+
+	default:
+		return nil, errors.New("unknown target type")
+	}
 }
