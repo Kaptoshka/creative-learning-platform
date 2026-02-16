@@ -28,7 +28,7 @@ type Assignments interface {
 	) (uuid.UUID, error)
 	Update(
 		ctx context.Context,
-		assignmentID string,
+		assignmentID uuid.UUID,
 		updates map[string]any,
 		targets []*models.AssignmentTarget,
 	) (*models.AssignmentTemplate, error)
@@ -132,7 +132,12 @@ func (s *serverAPI) UpdateAssignment(
 		targets = append(targets, target)
 	}
 
-	updateModel, err := s.assignments.Update(ctx, req.AssignmentId, updates, targets)
+	assignmentID, err := uuid.Parse(req.AssignmentId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "assignment ID cannot be parsed")
+	}
+
+	updateModel, err := s.assignments.Update(ctx, assignmentID, updates, targets)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
