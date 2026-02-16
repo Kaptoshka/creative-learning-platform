@@ -166,11 +166,7 @@ message ListAssignmentSubmissionsRequest {
 }
 
 message ListAssignmentSubmissionsResponse {
-  message SubmissionItem {
-    Submission submission = 1;
-    StudentSummary student = 2;
-  }
-  repeated SubmissionItem items = 1;
+  repeated Submission items = 1;
   string next_page_token = 2;
 }
 

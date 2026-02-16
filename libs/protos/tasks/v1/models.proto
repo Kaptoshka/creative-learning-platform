@@ -60,12 +60,6 @@ message AssignmentTarget {
   }
 }
 
-message StudentSummary {
-  string id = 1;
-  string full_name = 2;
-  string avatar_url = 3;
-}
-
 message Submission {
   string id = 1;
   string template_id = 2;
