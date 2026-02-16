@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -52,6 +53,12 @@ type Assignments interface {
 }
 
 type Submissions interface {
+	ListByTemplateID(
+		ctx context.Context,
+		templateID uuid.UUID,
+		pageSize int32,
+		pageToken string,
+	) ([]*models.SubmissionItem, string, error)
 }
 
 type serverAPI struct {
@@ -331,6 +338,74 @@ func (s *serverAPI) ListAssignments(
 
 	return &tasksv1.ListAssignmentsResponse{
 		Items:         assignmentsProto,
+		NextPageToken: token,
+	}, nil
+}
+
+func (s *serverAPI) ListAssignmentSubmissions(
+	ctx context.Context,
+	req *tasksv1.ListAssignmentSubmissionsRequest,
+) (*tasksv1.ListAssignmentSubmissionsResponse, error) {
+	templateID, err := uuid.Parse(req.TemplateId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid template ID format")
+	}
+
+	limit := req.PageSize
+	if limit <= 0 {
+		limit = models.DefaultPageSizeLimit
+	}
+
+	submissions, token, err := s.submissions.ListByTemplateID(ctx, templateID, limit, req.PageToken)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to list submissions")
+	}
+
+	submissionsProto := make([]*tasksv1.Submission, 0, len(submissions))
+	for _, item := range submissions {
+		payload, err := structpb.NewStruct(item.SubmissionVersion.Payload)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to parse submission payload")
+		}
+
+		submissionVersion := &tasksv1.SubmissionVersion{
+			Id:               item.SubmissionVersion.ID.String(),
+			VersionNumber:    item.SubmissionVersion.VersionNumber,
+			Payload:          payload,
+			TimeSpentSeconds: durationpb.New(item.SubmissionVersion.TimeSpentSeconds),
+			IsAutosave:       item.SubmissionVersion.IsAutosave,
+			CreatedAt:        timestamppb.New(item.SubmissionVersion.CreatedAt),
+		}
+
+		itemProto := &tasksv1.Submission{
+			Id:            item.Submission.ID.String(),
+			TemplateId:    item.Submission.TemplateID.String(),
+			StudentId:     item.Submission.StudentID.String(),
+			StartedAt:     timestamppb.New(item.Submission.StartedAt),
+			SubmittedAt:   timestamppb.New(item.Submission.SubmittedAt),
+			LatestVersion: submissionVersion,
+		}
+
+		switch item.Submission.Status {
+		case models.StatusNotSpecified:
+			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED
+		case models.StatusNotStarted:
+			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_NOT_STARTED
+		case models.StatusInProgress:
+			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_IN_PROGRESS
+		case models.StatusSubmitted:
+			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_SUBMITTED
+		case models.StatusGraded:
+			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_GRADED
+		case models.StatusReturned:
+			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_RETURNED
+		}
+
+		submissionsProto = append(submissionsProto, itemProto)
+	}
+
+	return &tasksv1.ListAssignmentSubmissionsResponse{
+		Items:         submissionsProto,
 		NextPageToken: token,
 	}, nil
 }

@@ -16,12 +16,17 @@ type Submission struct {
 }
 
 type SubmissionVersion struct {
-	ID               uuid.UUID `db:"id"`
-	SubmissionID     uuid.UUID `db:"submission_id"`
-	VersionNumber    int       `db:"version_number"`
-	Payload          JSONB     `db:"payload"`
-	TimeSpentSeconds int       `db:"time_spent_seconds"`
-	IsAutosave       bool      `db:"is_autosave"`
-	CreatedAt        time.Time `db:"created_at"`
-	UpdatedAt        time.Time `db:"updated_at"`
+	ID               uuid.UUID     `db:"id"`
+	SubmissionID     uuid.UUID     `db:"submission_id"`
+	VersionNumber    int32         `db:"version_number"`
+	Payload          JSONB         `db:"payload"`
+	TimeSpentSeconds time.Duration `db:"time_spent_seconds"`
+	IsAutosave       bool          `db:"is_autosave"`
+	CreatedAt        time.Time     `db:"created_at"`
+	UpdatedAt        time.Time     `db:"updated_at"`
+}
+
+type SubmissionItem struct {
+	Submission        *Submission
+	SubmissionVersion *SubmissionVersion
 }
