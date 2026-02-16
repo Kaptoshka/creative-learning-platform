@@ -19,6 +19,13 @@ type AssignmentTemplate struct {
 	UpdatedAt    time.Time `db:"updated_at"`
 }
 
+type AssignmentTemplateLight struct {
+	ID         uuid.UUID `db:"id"`
+	Title      string    `db:"title"`
+	WidgetType string    `db:"widget_type"`
+	DueDate    time.Time `db:"due_date"`
+}
+
 type AssignmentTarget struct {
 	ID         uuid.UUID  `db:"id"`
 	TemplateID uuid.UUID  `db:"template_id"`

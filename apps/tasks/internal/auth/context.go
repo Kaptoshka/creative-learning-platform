@@ -19,10 +19,10 @@ const (
 	RoleDev     = "dev"
 )
 
-func GetUserID(ctx context.Context) (int64, error) {
-	val, ok := ctx.Value(contextKeyUserID).(int64)
-	if !ok {
-		return 0, errors.New("user id not found in context")
+func GetUserID(ctx context.Context) (string, error) {
+	val, ok := ctx.Value(contextKeyUserID).(string)
+	if !ok || val == "" {
+		return "", errors.New("user id not found in context")
 	}
 	return val, nil
 }
@@ -35,7 +35,11 @@ func GetUserRole(ctx context.Context) string {
 	return val
 }
 
-func WithUser(ctx context.Context, userID int64, role string) context.Context {
+func New(
+	ctx context.Context,
+	userID string,
+	role string,
+) context.Context {
 	ctx = context.WithValue(ctx, contextKeyUserID, userID)
 	ctx = context.WithValue(ctx, contextKeyRole, role)
 	return ctx

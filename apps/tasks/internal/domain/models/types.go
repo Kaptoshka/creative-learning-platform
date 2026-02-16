@@ -10,3 +10,7 @@ const (
 	StatusGraded     SubmissionStatus = "GRADED"
 	StatusReturned   SubmissionStatus = "RETURNED"
 )
+
+const (
+	DefaultPageSizeLimit = 10
+)

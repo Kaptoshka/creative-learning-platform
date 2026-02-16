@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"tasks/internal/auth"
 	"tasks/internal/domain/models"
 	"tasks/internal/storage"
 
@@ -42,6 +43,12 @@ type Assignments interface {
 		ctx context.Context,
 		assignmentID uuid.UUID,
 	) (*models.AssignmentTemplate, []*models.AssignmentTarget, error)
+	List(
+		ctx context.Context,
+		creatorID uuid.UUID,
+		pageSize int32,
+		pageToken string,
+	) ([]*models.AssignmentTemplateLight, string, error)
 }
 
 type Submissions interface {
@@ -274,5 +281,56 @@ func (s *serverAPI) GetAssignment(
 	return &tasksv1.GetAssignmentResponse{
 		Template: assignmentProto,
 		Targets:  targetsProto,
+	}, nil
+}
+
+func (s *serverAPI) ListAssignments(
+	ctx context.Context,
+	req *tasksv1.ListAssignmentsRequest,
+) (*tasksv1.ListAssignmentsResponse, error) {
+	userIDstr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	targetID, err := uuid.Parse(userIDstr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user ID in token")
+	}
+
+	role := auth.GetUserRole(ctx)
+
+	if role == auth.RoleAdmin && req.CreatorId != "" {
+		parsedCreatorID, err := uuid.Parse(req.CreatorId)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid creator ID format")
+		}
+		targetID = parsedCreatorID
+	}
+
+	limit := req.PageSize
+	if limit <= 0 {
+		limit = models.DefaultPageSizeLimit
+	}
+
+	assignments, token, err := s.assignments.List(ctx, targetID, limit, req.PageToken)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to list assignments")
+	}
+
+	assignmentsProto := make([]*tasksv1.AssignmentTemplateLight, 0, len(assignments))
+	for _, item := range assignments {
+		itemProto := &tasksv1.AssignmentTemplateLight{
+			Id:         item.ID.String(),
+			Title:      item.Title,
+			WidgetType: item.WidgetType,
+			DueDate:    timestamppb.New(item.DueDate),
+		}
+		assignmentsProto = append(assignmentsProto, itemProto)
+	}
+
+	return &tasksv1.ListAssignmentsResponse{
+		Items:         assignmentsProto,
+		NextPageToken: token,
 	}, nil
 }
