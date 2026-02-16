@@ -38,6 +38,10 @@ type Assignments interface {
 		ctx context.Context,
 		assignmentID uuid.UUID,
 	) error
+	GetByID(
+		ctx context.Context,
+		assignmentID uuid.UUID,
+	) (*models.AssignmentTemplate, []*models.AssignmentTarget, error)
 }
 
 type Submissions interface {
@@ -214,4 +218,61 @@ func (s *serverAPI) DeleteAssignment(
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *serverAPI) GetAssignment(
+	ctx context.Context,
+	req *tasksv1.GetAssignmentRequest,
+) (*tasksv1.GetAssignmentResponse, error) {
+	assignmentID, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid assignment ID format")
+	}
+
+	assignment, targets, err := s.assignments.GetByID(ctx, assignmentID)
+	if err != nil {
+		if errors.Is(err, storage.ErrAssignmentNotFound) {
+			return nil, status.Error(codes.NotFound, "assignment with provided ID not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to retrieve assignment")
+	}
+
+	widgetConfig, err := structpb.NewStruct(assignment.WidgetConfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to convert widget config")
+	}
+
+	assignmentProto := &tasksv1.AssignmentTemplate{
+		Id:           assignment.ID.String(),
+		CreatorId:    assignment.CreatorID.String(),
+		Title:        assignment.Title,
+		Description:  assignment.Description,
+		WidgetId:     assignment.WidgetID.String(),
+		WidgetConfig: widgetConfig,
+		DueDate:      timestamppb.New(assignment.DueDate),
+		CreatedAt:    timestamppb.New(assignment.CreatedAt),
+		UpdatedAt:    timestamppb.New(assignment.UpdatedAt),
+	}
+
+	targetsProto := make([]*tasksv1.AssignmentTarget, 0, len(targets))
+	for _, target := range targets {
+		var targetProto *tasksv1.AssignmentTarget
+		if target.GroupID != nil {
+			targetProto.Target = &tasksv1.AssignmentTarget_GroupId{
+				GroupId: target.GroupID.String(),
+			}
+		} else if target.StudentID != nil {
+			targetProto.Target = &tasksv1.AssignmentTarget_StudentId{
+				StudentId: target.StudentID.String(),
+			}
+		} else {
+			continue
+		}
+		targetsProto = append(targetsProto, targetProto)
+	}
+
+	return &tasksv1.GetAssignmentResponse{
+		Template: assignmentProto,
+		Targets:  targetsProto,
+	}, nil
 }
