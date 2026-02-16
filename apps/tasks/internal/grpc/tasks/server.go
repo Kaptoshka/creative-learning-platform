@@ -3,20 +3,29 @@ package tasks
 import (
 	"context"
 	"errors"
+	"time"
 
 	"tasks/internal/domain/models"
 
+	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
 )
 
 type Assignments interface {
+	Create(
+		ctx context.Context,
+		title string,
+		description string,
+		widgetID uuid.UUID,
+		widgetConfig *models.JSONB,
+		dueDate *time.Time,
+		targets []*models.AssignmentTarget,
+	) (uuid.UUID, error)
 	Update(
 		ctx context.Context,
 		assignmentID string,
@@ -45,6 +54,48 @@ func Register(
 	})
 }
 
+func (s *serverAPI) CreateAssignment(
+	ctx context.Context,
+	req *tasksv1.CreateAssignmentRequest,
+) (*tasksv1.CreateAssignmentResponse, error) {
+	targets := make([]*models.AssignmentTarget, 0, len(req.Targets))
+
+	for _, trg := range req.Targets {
+		target, err := processTarget(trg)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+
+		targets = append(targets, target)
+	}
+
+	widgetID, err := uuid.Parse(req.WidgetId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "parsing widget ID error")
+	}
+
+	widgetConfig := models.JSONB(req.WidgetConfig.AsMap())
+
+	dueTime := req.DueDate.AsTime()
+
+	assignmentID, err := s.assignments.Create(
+		ctx,
+		req.Title,
+		req.Description,
+		widgetID,
+		&widgetConfig,
+		&dueTime,
+		targets,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &tasksv1.CreateAssignmentResponse{
+		Id: assignmentID.String(),
+	}, nil
+}
+
 func (s *serverAPI) UpdateAssignment(
 	ctx context.Context,
 	req *tasksv1.UpdateAssignmentRequest,
@@ -70,7 +121,7 @@ func (s *serverAPI) UpdateAssignment(
 		}
 	}
 
-	targets := make([]*models.AssignmentTarget, len(req.Targets))
+	targets := make([]*models.AssignmentTarget, 0, len(req.Targets))
 
 	for _, trg := range req.Targets {
 		target, err := processTarget(trg)
