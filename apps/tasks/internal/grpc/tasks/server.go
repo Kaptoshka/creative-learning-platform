@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"tasks/internal/domain/models"
+	"tasks/internal/storage"
 
 	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -32,6 +34,10 @@ type Assignments interface {
 		updates map[string]any,
 		targets []*models.AssignmentTarget,
 	) (*models.AssignmentTemplate, error)
+	Delete(
+		ctx context.Context,
+		assignmentID uuid.UUID,
+	) error
 }
 
 type Submissions interface {
@@ -187,4 +193,25 @@ func processTarget(t *tasksv1.AssignmentTarget) (*models.AssignmentTarget, error
 	default:
 		return nil, errors.New("unknown target type")
 	}
+}
+
+func (s *serverAPI) DeleteAssignment(
+	ctx context.Context,
+	req *tasksv1.DeleteAssignmentRequest,
+) (*emptypb.Empty, error) {
+	assignmentID, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid assignment ID format")
+	}
+
+	err = s.assignments.Delete(ctx, assignmentID)
+	if err != nil {
+		if errors.Is(err, storage.ErrAssignmentNotFound) {
+			return nil, status.Error(codes.NotFound, "assignment not found")
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
 }
