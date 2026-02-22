@@ -59,6 +59,11 @@ type Submissions interface {
 		pageSize int32,
 		pageToken string,
 	) ([]*models.SubmissionItem, string, error)
+	// TODO: make simpler output
+	GetByID(
+		ctx context.Context,
+		submissionID uuid.UUID,
+	) (*models.AssignmentTemplate, *models.Submission, []*models.SubmissionVersion, []*models.Feedback, error)
 }
 
 type serverAPI struct {
@@ -408,4 +413,117 @@ func (s *serverAPI) ListAssignmentSubmissions(
 		Items:         submissionsProto,
 		NextPageToken: token,
 	}, nil
+}
+
+func (s *serverAPI) GetStudentSubmission(
+	ctx context.Context,
+	req *tasksv1.GetStudentSubmissionRequest,
+) (*tasksv1.GetStudentSubmissionResponse, error) {
+	submissionID, err := uuid.Parse(req.SubmissionId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid submission ID format")
+	}
+
+	assignment, submission, submissionVersions, feedbacks, err := s.submissions.GetByID(ctx, submissionID)
+	if err != nil {
+		if errors.Is(err, storage.ErrSubmissionNotFound) {
+			return nil, status.Error(codes.NotFound, "submission not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to retrieve data")
+	}
+
+	widgetConfig, err := structpb.NewStruct(assignment.WidgetConfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to parse widget config")
+	}
+
+	templateProto := &tasksv1.AssignmentTemplate{
+		Id:           assignment.ID.String(),
+		CreatorId:    assignment.CreatorID.String(),
+		Title:        assignment.Title,
+		Description:  assignment.Description,
+		WidgetId:     assignment.WidgetID.String(),
+		WidgetConfig: widgetConfig,
+		DueDate:      timestamppb.New(assignment.DueDate),
+		CreatedAt:    timestamppb.New(assignment.CreatedAt),
+		UpdatedAt:    timestamppb.New(assignment.UpdatedAt),
+	}
+
+	var submittedAtPb *timestamppb.Timestamp
+	if submission.SubmittedAt != nil {
+		submittedAtPb = timestamppb.New(*submission.SubmittedAt)
+	}
+
+	submissionProto := &tasksv1.Submission{
+		Id:          submission.ID.String(),
+		TemplateId:  submission.TemplateID.String(),
+		StudentId:   submission.StudentID.String(),
+		Status:      convertSubmissionStatus(submission.Status),
+		StartedAt:   timestamppb.New(submission.StartedAt),
+		SubmittedAt: submittedAtPb,
+	}
+
+	versionsHistory := make([]*tasksv1.SubmissionVersion, 0, len(submissionVersions))
+	for _, version := range submissionVersions {
+		versionPayload, err := structpb.NewStruct(version.Payload)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to parse version payload")
+		}
+
+		versionsHistory = append(versionsHistory, &tasksv1.SubmissionVersion{
+			Id:               version.ID.String(),
+			VersionNumber:    version.VersionNumber,
+			Payload:          versionPayload,
+			TimeSpentSeconds: durationpb.New(time.Duration(version.TimeSpentSeconds) * time.Second),
+			IsAutosave:       version.IsAutosave,
+			CreatedAt:        timestamppb.New(version.CreatedAt),
+		})
+	}
+
+	feedbackHistory := make([]*tasksv1.Feedback, 0, len(feedbacks))
+	for _, feedback := range feedbacks {
+		feedbackPayload, err := structpb.NewStruct(feedback.Payload)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to parse feedback payload")
+		}
+
+		var textContent string
+		if feedback.TextContent != nil {
+			textContent = *feedback.TextContent
+		}
+
+		feedbackHistory = append(feedbackHistory, &tasksv1.Feedback{
+			Id:          feedback.ID.String(),
+			VersionId:   feedback.VersionID.String(),
+			GraderId:    feedback.GraderID.String(),
+			TextContent: textContent,
+			Payload:     feedbackPayload,
+			IsPublished: feedback.IsPublished,
+			CreatedAt:   timestamppb.New(feedback.CreatedAt),
+		})
+	}
+
+	return &tasksv1.GetStudentSubmissionResponse{
+		Template:   templateProto,
+		Submission: submissionProto,
+		History:    versionsHistory,
+		Feedback:   feedbackHistory,
+	}, nil
+}
+
+func convertSubmissionStatus(status models.SubmissionStatus) tasksv1.SubmissionStatus {
+	switch status {
+	case models.StatusNotStarted:
+		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_NOT_STARTED
+	case models.StatusInProgress:
+		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_IN_PROGRESS
+	case models.StatusSubmitted:
+		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_SUBMITTED
+	case models.StatusGraded:
+		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_GRADED
+	case models.StatusReturned:
+		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_RETURNED
+	default:
+		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED
+	}
 }
