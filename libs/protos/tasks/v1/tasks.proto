@@ -72,17 +72,20 @@ message CreateAssignmentResponse {
 
 message UpdateAssignmentRequest {
   string assignment_id = 1;
-
   AssignmentTemplate template = 2;
-
   google.protobuf.FieldMask update_mask = 3;
-
   repeated AssignmentTarget targets = 4;
+}
+
+message UpdateAssignmentResponse {
+  AssignmentTemplate template = 1;
 }
 
 message DeleteAssignmentRequest {
   string id = 1;
 }
+
+message DeleteAssignmentResponse {}
 
 message GetAssignmentRequest {
   string id = 1;
@@ -187,11 +190,5 @@ message ProvideFeedbackRequest {
   google.protobuf.Struct payload = 4;
   bool is_published = 5;
 }
-
-message UpdateAssignmentResponse {
-  AssignmentTemplate template = 1;
-}
-
-message DeleteAssignmentResponse {}
 
 message ProvideFeedbackResponse {}
