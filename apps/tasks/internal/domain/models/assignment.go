@@ -19,10 +19,11 @@ type AssignmentTemplate struct {
 }
 
 type AssignmentTemplateLight struct {
-	ID         uuid.UUID `db:"id"`
-	Title      string    `db:"title"`
-	WidgetType string    `db:"widget_type"`
-	DueDate    time.Time `db:"due_date"`
+	ID         uuid.UUID        `db:"id"`
+	Title      string           `db:"title"`
+	Status     SubmissionStatus `db:"status"`
+	WidgetType string           `db:"widget_type"`
+	DueDate    time.Time        `db:"due_date"`
 }
 
 type AssignmentTarget struct {

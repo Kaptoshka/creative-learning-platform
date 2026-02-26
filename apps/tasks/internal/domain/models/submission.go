@@ -12,7 +12,7 @@ type Submission struct {
 	StudentID   uuid.UUID        `db:"student_id"`
 	Status      SubmissionStatus `db:"status"`
 	StartedAt   time.Time        `db:"started_at"`
-	SubmittedAt *time.Time        `db:"submitted_at"`
+	SubmittedAt *time.Time       `db:"submitted_at"`
 }
 
 type SubmissionVersion struct {

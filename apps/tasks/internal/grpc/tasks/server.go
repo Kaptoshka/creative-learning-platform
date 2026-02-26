@@ -49,6 +49,13 @@ type Assignments interface {
 		pageSize int32,
 		pageToken string,
 	) ([]*models.AssignmentTemplateLight, string, error)
+	ListByUserID(
+		ctx context.Context,
+		userID uuid.UUID,
+		pageSize int32,
+		pageToken string,
+		statusFilter models.SubmissionStatus,
+	) ([]*models.AssignmentTemplateLight, string, error)
 }
 
 type Submissions interface {
@@ -528,6 +535,23 @@ func convertSubmissionStatus(status models.SubmissionStatus) tasksv1.SubmissionS
 	}
 }
 
+func convertProtoStatus(status tasksv1.SubmissionStatus) models.SubmissionStatus {
+	switch status {
+	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_NOT_STARTED:
+		return models.StatusNotStarted
+	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_IN_PROGRESS:
+		return models.StatusInProgress
+	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_SUBMITTED:
+		return models.StatusSubmitted
+	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_GRADED:
+		return models.StatusGraded
+	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_RETURNED:
+		return models.StatusReturned
+	default:
+		return models.StatusNotSpecified
+	}
+}
+
 func (s *serverAPI) ProvideFeedback(
 	ctx context.Context,
 	req *tasksv1.ProvideFeedbackRequest,
@@ -576,4 +600,64 @@ func (s *serverAPI) ProvideFeedback(
 	}
 
 	return &tasksv1.ProvideFeedbackResponse{}, nil
+}
+
+func (s *serverAPI) ListMyAssignments(
+	ctx context.Context,
+	req *tasksv1.ListMyAssignmentsRequest,
+) (*tasksv1.ListMyAssignmentsResponse, error) {
+	userIDStr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
+	}
+
+	limit := req.GetPageSize()
+	if limit <= 0 {
+		limit = models.DefaultPageSizeLimit
+	}
+
+	statusFilter := convertProtoStatus(req.GetStatusFilter())
+
+	assignments, token, err := s.assignments.ListByUserID(
+		ctx,
+		userID,
+		limit,
+		req.GetPageToken(),
+		statusFilter,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to list assignments")
+	}
+
+	items := make([]*tasksv1.ListMyAssignmentsResponse_StudentItem, 0, len(assignments))
+
+	for _, item := range assignments {
+		itemTemplate := &tasksv1.AssignmentTemplateLight{
+			Id:         item.ID.String(),
+			Title:      item.Title,
+			WidgetType: item.WidgetType,
+			DueDate:    timestamppb.New(item.DueDate),
+		}
+		itemStatus := convertSubmissionStatus(item.Status)
+		hasFeedback := false
+		if item.Status == models.StatusGraded || item.Status == models.StatusReturned {
+			hasFeedback = true
+		}
+
+		items = append(items, &tasksv1.ListMyAssignmentsResponse_StudentItem{
+			Template:    itemTemplate,
+			Status:      itemStatus,
+			HasFeedback: hasFeedback,
+		})
+	}
+
+	return &tasksv1.ListMyAssignmentsResponse{
+		Items:         items,
+		NextPageToken: token,
+	}, nil
 }
