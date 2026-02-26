@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -67,7 +66,7 @@ type Submissions interface {
 }
 
 type serverAPI struct {
-	tasksv1.UnimplementedTasksServer
+	tasksv1.UnimplementedTasksServiceServer
 	assignments Assignments
 	submissions Submissions
 }
@@ -77,7 +76,7 @@ func Register(
 	assignments Assignments,
 	submissions Submissions,
 ) {
-	tasksv1.RegisterTasksServer(gRPC, &serverAPI{
+	tasksv1.RegisterTasksServiceServer(gRPC, &serverAPI{
 		assignments: assignments,
 		submissions: submissions,
 	})
@@ -128,7 +127,7 @@ func (s *serverAPI) CreateAssignment(
 func (s *serverAPI) UpdateAssignment(
 	ctx context.Context,
 	req *tasksv1.UpdateAssignmentRequest,
-) (*tasksv1.AssignmentTemplate, error) {
+) (*tasksv1.UpdateAssignmentResponse, error) {
 	if !req.UpdateMask.IsValid(req.Template) {
 		return nil, status.Error(codes.InvalidArgument, "invalid update mask")
 	}
@@ -176,16 +175,18 @@ func (s *serverAPI) UpdateAssignment(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &tasksv1.AssignmentTemplate{
-		Id:           updateModel.ID.String(),
-		CreatorId:    updateModel.CreatorID.String(),
-		Title:        updateModel.Title,
-		Description:  updateModel.Description,
-		WidgetId:     updateModel.WidgetID.String(),
-		WidgetConfig: widgetConfig,
-		DueDate:      timestamppb.New(updateModel.DueDate),
-		CreatedAt:    timestamppb.New(updateModel.CreatedAt),
-		UpdatedAt:    timestamppb.New(updateModel.UpdatedAt),
+	return &tasksv1.UpdateAssignmentResponse{
+		Template: &tasksv1.AssignmentTemplate{
+			Id:           updateModel.ID.String(),
+			CreatorId:    updateModel.CreatorID.String(),
+			Title:        updateModel.Title,
+			Description:  updateModel.Description,
+			WidgetId:     updateModel.WidgetID.String(),
+			WidgetConfig: widgetConfig,
+			DueDate:      timestamppb.New(updateModel.DueDate),
+			CreatedAt:    timestamppb.New(updateModel.CreatedAt),
+			UpdatedAt:    timestamppb.New(updateModel.UpdatedAt),
+		},
 	}, nil
 }
 
@@ -221,7 +222,7 @@ func processTarget(t *tasksv1.AssignmentTarget) (*models.AssignmentTarget, error
 func (s *serverAPI) DeleteAssignment(
 	ctx context.Context,
 	req *tasksv1.DeleteAssignmentRequest,
-) (*emptypb.Empty, error) {
+) (*tasksv1.DeleteAssignmentResponse, error) {
 	assignmentID, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid assignment ID format")
@@ -236,7 +237,7 @@ func (s *serverAPI) DeleteAssignment(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &emptypb.Empty{}, nil
+	return &tasksv1.DeleteAssignmentResponse{}, nil
 }
 
 func (s *serverAPI) GetAssignment(
@@ -386,24 +387,10 @@ func (s *serverAPI) ListAssignmentSubmissions(
 			Id:            item.Submission.ID.String(),
 			TemplateId:    item.Submission.TemplateID.String(),
 			StudentId:     item.Submission.StudentID.String(),
+			Status:        convertSubmissionStatus(item.Submission.Status),
 			StartedAt:     timestamppb.New(item.Submission.StartedAt),
-			SubmittedAt:   timestamppb.New(item.Submission.SubmittedAt),
+			SubmittedAt:   timestamppb.New(*item.Submission.SubmittedAt),
 			LatestVersion: submissionVersion,
-		}
-
-		switch item.Submission.Status {
-		case models.StatusNotSpecified:
-			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED
-		case models.StatusNotStarted:
-			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_NOT_STARTED
-		case models.StatusInProgress:
-			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_IN_PROGRESS
-		case models.StatusSubmitted:
-			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_SUBMITTED
-		case models.StatusGraded:
-			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_GRADED
-		case models.StatusReturned:
-			itemProto.Status = tasksv1.SubmissionStatus_SUBMISSION_STATUS_RETURNED
 		}
 
 		submissionsProto = append(submissionsProto, itemProto)
