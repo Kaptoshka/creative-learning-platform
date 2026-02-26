@@ -14,7 +14,6 @@ type AssignmentTemplate struct {
 	WidgetID     uuid.UUID `db:"widget_id"`
 	WidgetConfig JSONB     `db:"widget_config"`
 	DueDate      time.Time `db:"due_date"`
-	CutoffDate   time.Time `db:"cutoff_date"`
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
 }
