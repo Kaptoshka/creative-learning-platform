@@ -65,10 +65,23 @@ type Submissions interface {
 	) (*models.AssignmentTemplate, *models.Submission, []*models.SubmissionVersion, []*models.Feedback, error)
 }
 
+type Feedbacks interface {
+	Provide(
+		ctx context.Context,
+		graderID uuid.UUID,
+		submissionID uuid.UUID,
+		versionID uuid.UUID,
+		textContent string,
+		payload models.JSONB,
+		isPublished bool,
+	) error
+}
+
 type serverAPI struct {
 	tasksv1.UnimplementedTasksServiceServer
 	assignments Assignments
 	submissions Submissions
+	feedbacks   Feedbacks
 }
 
 func Register(
@@ -513,4 +526,54 @@ func convertSubmissionStatus(status models.SubmissionStatus) tasksv1.SubmissionS
 	default:
 		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED
 	}
+}
+
+func (s *serverAPI) ProvideFeedback(
+	ctx context.Context,
+	req *tasksv1.ProvideFeedbackRequest,
+) (*tasksv1.ProvideFeedbackResponse, error) {
+	userIDStr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user ID")
+	}
+
+	submissionID, err := uuid.Parse(req.GetSubmissionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid submission ID")
+	}
+
+	versionID, err := uuid.Parse(req.GetVersionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid submission version ID")
+	}
+
+	var feedbackPayload models.JSONB
+	if req.GetPayload() != nil {
+		feedbackPayload = models.JSONB(req.GetPayload().AsMap())
+	} else {
+		feedbackPayload = make(models.JSONB)
+	}
+
+	err = s.feedbacks.Provide(
+		ctx,
+		userID,
+		submissionID,
+		versionID,
+		req.GetTextContent(),
+		feedbackPayload,
+		req.GetIsPublished(),
+	)
+	if err != nil {
+		if errors.Is(err, storage.ErrSubmissionVersionNotFound) {
+			return nil, status.Error(codes.NotFound, "submission version not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to provide feedback")
+	}
+
+	return &tasksv1.ProvideFeedbackResponse{}, nil
 }
