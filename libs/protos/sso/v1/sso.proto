@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package auth;
+package sso.v1;
 
 option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/sso/v1;ssov1";
 
-service Auth {
+service AuthService {
     rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc Logout(LogoutRequest) returns (LogoutResponse);

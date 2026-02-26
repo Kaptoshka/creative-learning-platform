@@ -1,6 +1,7 @@
 node_modules
 .env
 *local*
+*logs.md
 
 gen/
 

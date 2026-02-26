@@ -1,9 +1,8 @@
 syntax = "proto3";
 
-package tasks;
+package tasks.v1;
 
 import "google/protobuf/duration.proto";
-import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
@@ -11,7 +10,7 @@ import "tasks/v1/models.proto";
 
 option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
 
-service Tasks {
+service TasksService {
   // --------------------------------
   // Teacher: Template management
   // --------------------------------
@@ -20,10 +19,10 @@ service Tasks {
   rpc CreateAssignment(CreateAssignmentRequest) returns (CreateAssignmentResponse);
 
   // Update template. If student already started assignment, it will not be updated.
-  rpc UpdateAssignment(UpdateAssignmentRequest) returns (AssignmentTemplate);
+  rpc UpdateAssignment(UpdateAssignmentRequest) returns (UpdateAssignmentResponse);
 
   // Delete template
-  rpc DeleteAssignment(DeleteAssignmentRequest) returns (google.protobuf.Empty);
+  rpc DeleteAssignment(DeleteAssignmentRequest) returns (DeleteAssignmentResponse);
 
   // Retrieve details of an assignment
   rpc GetAssignment(GetAssignmentRequest) returns (GetAssignmentResponse);
@@ -38,7 +37,7 @@ service Tasks {
 
   rpc GetStudentSubmission(GetStudentSubmissionRequest) returns (GetStudentSubmissionResponse);
 
-  rpc ProvideFeedback(ProvideFeedbackRequest) returns (google.protobuf.Empty);
+  rpc ProvideFeedback(ProvideFeedbackRequest) returns (ProvideFeedbackResponse);
 
   // --------------------------------
   // Student: Complete assignment workflow
@@ -130,7 +129,7 @@ message StartAssignmentRequest {
 
 message StartAssignmentResponse {
   string submission_id = 1;
-  google.protobuf.Struct started_at = 2;
+  google.protobuf.Timestamp started_at = 2;
 }
 
 message SaveAssignmentDraftRequest {
@@ -188,3 +187,11 @@ message ProvideFeedbackRequest {
   google.protobuf.Struct payload = 4;
   bool is_published = 5;
 }
+
+message UpdateAssignmentResponse {
+  AssignmentTemplate template = 1;
+}
+
+message DeleteAssignmentResponse {}
+
+message ProvideFeedbackResponse {}
