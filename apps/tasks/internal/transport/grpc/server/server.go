@@ -22,18 +22,14 @@ import (
 type Assignments interface {
 	Create(
 		ctx context.Context,
-		title string,
-		description string,
-		widgetID uuid.UUID,
-		widgetConfig *models.JSONB,
-		dueDate *time.Time,
-		targets []*models.AssignmentTarget,
+		creatorID uuid.UUID,
+		dto models.CreateAssignmentDTO,
 	) (uuid.UUID, error)
 	Update(
 		ctx context.Context,
 		assignmentID uuid.UUID,
 		updates map[string]any,
-		targets []*models.AssignmentTarget,
+		targets []*models.TargetDTO,
 	) (*models.AssignmentTemplate, error)
 	Delete(
 		ctx context.Context,
@@ -42,7 +38,7 @@ type Assignments interface {
 	GetByID(
 		ctx context.Context,
 		assignmentID uuid.UUID,
-	) (*models.AssignmentTemplate, []*models.AssignmentTarget, error)
+	) (*models.AssignmentTemplate, []*models.TargetDTO, error)
 	List(
 		ctx context.Context,
 		creatorID uuid.UUID,
@@ -56,6 +52,21 @@ type Assignments interface {
 		pageToken string,
 		statusFilter models.SubmissionStatus,
 	) ([]*models.AssignmentTemplateLight, string, error)
+	Start(
+		ctx context.Context,
+		studentID uuid.UUID,
+		templateID uuid.UUID,
+	) (uuid.UUID, time.Time, error)
+	SaveDraft(
+		ctx context.Context,
+		studentID uuid.UUID,
+		payload models.JSONB,
+	) (uuid.UUID, error)
+	Submit(
+		ctx context.Context,
+		studentID uuid.UUID,
+		payload models.JSONB,
+	) (uuid.UUID, models.SubmissionStatus, error)
 }
 
 type Submissions interface {
@@ -65,22 +76,24 @@ type Submissions interface {
 		pageSize int32,
 		pageToken string,
 	) ([]*models.SubmissionItem, string, error)
-	// TODO: make simpler output
 	GetByID(
 		ctx context.Context,
 		submissionID uuid.UUID,
-	) (*models.AssignmentTemplate, *models.Submission, []*models.SubmissionVersion, []*models.Feedback, error)
+	) (
+		*models.AssignmentTemplate,
+		*models.Submission,
+		[]*models.SubmissionVersion,
+		[]*models.Feedback,
+		error,
+	)
 }
 
 type Feedbacks interface {
 	Provide(
 		ctx context.Context,
 		graderID uuid.UUID,
-		submissionID uuid.UUID,
-		versionID uuid.UUID,
-		textContent string,
-		payload models.JSONB,
-		isPublished bool,
+		// TODO: make FeedbackDTO
+		dto *models.FeedbackDTO,
 	) error
 }
 
@@ -106,12 +119,22 @@ func (s *serverAPI) CreateAssignment(
 	ctx context.Context,
 	req *tasksv1.CreateAssignmentRequest,
 ) (*tasksv1.CreateAssignmentResponse, error) {
-	targets := make([]*models.AssignmentTarget, 0, len(req.Targets))
+	userIDStr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user ID in token")
+	}
+
+	targets := make([]*models.TargetDTO, 0, len(req.Targets))
 
 	for _, trg := range req.Targets {
 		target, err := processTarget(trg)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+			return nil, status.Error(codes.InvalidArgument, "invalid target")
 		}
 
 		targets = append(targets, target)
@@ -126,17 +149,22 @@ func (s *serverAPI) CreateAssignment(
 
 	dueTime := req.DueDate.AsTime()
 
+	assignmentDTO := models.CreateAssignmentDTO{
+		Title:        req.Title,
+		Description:  req.Description,
+		WidgetID:     widgetID,
+		WidgetConfig: widgetConfig,
+		DueDate:      &dueTime,
+		Targets:      targets,
+	}
+
 	assignmentID, err := s.assignments.Create(
 		ctx,
-		req.Title,
-		req.Description,
-		widgetID,
-		&widgetConfig,
-		&dueTime,
-		targets,
+		userID,
+		assignmentDTO,
 	)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, "creating assignment error")
 	}
 
 	return &tasksv1.CreateAssignmentResponse{
@@ -148,6 +176,11 @@ func (s *serverAPI) UpdateAssignment(
 	ctx context.Context,
 	req *tasksv1.UpdateAssignmentRequest,
 ) (*tasksv1.UpdateAssignmentResponse, error) {
+	userRole := auth.GetUserRole(ctx)
+	if userRole != auth.RoleAdmin && userRole != auth.RoleTeacher {
+		return nil, status.Error(codes.PermissionDenied, "user not allowed to update assignment")
+	}
+
 	if !req.UpdateMask.IsValid(req.Template) {
 		return nil, status.Error(codes.InvalidArgument, "invalid update mask")
 	}
@@ -169,12 +202,12 @@ func (s *serverAPI) UpdateAssignment(
 		}
 	}
 
-	targets := make([]*models.AssignmentTarget, 0, len(req.Targets))
+	targets := make([]*models.TargetDTO, 0, len(req.Targets))
 
 	for _, trg := range req.Targets {
 		target, err := processTarget(trg)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+			return nil, status.Error(codes.InvalidArgument, "invalid target")
 		}
 
 		targets = append(targets, target)
@@ -187,7 +220,7 @@ func (s *serverAPI) UpdateAssignment(
 
 	updateModel, err := s.assignments.Update(ctx, assignmentID, updates, targets)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, "cannot update assignment")
 	}
 
 	widgetConfig, err := structpb.NewStruct(updateModel.WidgetConfig)
@@ -203,14 +236,16 @@ func (s *serverAPI) UpdateAssignment(
 			Description:  updateModel.Description,
 			WidgetId:     updateModel.WidgetID.String(),
 			WidgetConfig: widgetConfig,
-			DueDate:      timestamppb.New(updateModel.DueDate),
+			DueDate:      timestamppb.New(*updateModel.DueDate),
 			CreatedAt:    timestamppb.New(updateModel.CreatedAt),
 			UpdatedAt:    timestamppb.New(updateModel.UpdatedAt),
 		},
 	}, nil
 }
 
-func processTarget(t *tasksv1.AssignmentTarget) (*models.AssignmentTarget, error) {
+func processTarget(
+	t *tasksv1.AssignmentTarget,
+) (*models.TargetDTO, error) {
 	switch v := t.GetTarget().(type) {
 	case *tasksv1.AssignmentTarget_GroupId:
 		groupID, err := uuid.Parse(v.GroupId)
@@ -218,7 +253,7 @@ func processTarget(t *tasksv1.AssignmentTarget) (*models.AssignmentTarget, error
 			return nil, errors.New("invalid group ID")
 		}
 
-		return &models.AssignmentTarget{
+		return &models.TargetDTO{
 			GroupID: &groupID,
 		}, nil
 	case *tasksv1.AssignmentTarget_StudentId:
@@ -227,7 +262,7 @@ func processTarget(t *tasksv1.AssignmentTarget) (*models.AssignmentTarget, error
 			return nil, errors.New("invalid student ID")
 		}
 
-		return &models.AssignmentTarget{
+		return &models.TargetDTO{
 			StudentID: &studentID,
 		}, nil
 
@@ -243,6 +278,12 @@ func (s *serverAPI) DeleteAssignment(
 	ctx context.Context,
 	req *tasksv1.DeleteAssignmentRequest,
 ) (*tasksv1.DeleteAssignmentResponse, error) {
+	userRole := auth.GetUserRole(ctx)
+
+	if userRole != auth.RoleTeacher && userRole != auth.RoleAdmin {
+		return nil, status.Error(codes.PermissionDenied, "user not allowed to delete assignments")
+	}
+
 	assignmentID, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid assignment ID format")
@@ -264,6 +305,12 @@ func (s *serverAPI) GetAssignment(
 	ctx context.Context,
 	req *tasksv1.GetAssignmentRequest,
 ) (*tasksv1.GetAssignmentResponse, error) {
+	userRole := auth.GetUserRole(ctx)
+
+	if userRole != auth.RoleTeacher && userRole != auth.RoleAdmin {
+		return nil, status.Error(codes.PermissionDenied, "user not allowed to delete assignments")
+	}
+
 	assignmentID, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid assignment ID format")
@@ -289,7 +336,7 @@ func (s *serverAPI) GetAssignment(
 		Description:  assignment.Description,
 		WidgetId:     assignment.WidgetID.String(),
 		WidgetConfig: widgetConfig,
-		DueDate:      timestamppb.New(assignment.DueDate),
+		DueDate:      timestamppb.New(*assignment.DueDate),
 		CreatedAt:    timestamppb.New(assignment.CreatedAt),
 		UpdatedAt:    timestamppb.New(assignment.UpdatedAt),
 	}
@@ -357,7 +404,7 @@ func (s *serverAPI) ListAssignments(
 			Id:         item.ID.String(),
 			Title:      item.Title,
 			WidgetType: item.WidgetType,
-			DueDate:    timestamppb.New(item.DueDate),
+			DueDate:    timestamppb.New(*item.DueDate),
 		}
 		assignmentsProto = append(assignmentsProto, itemProto)
 	}
@@ -451,7 +498,7 @@ func (s *serverAPI) GetStudentSubmission(
 		Description:  assignment.Description,
 		WidgetId:     assignment.WidgetID.String(),
 		WidgetConfig: widgetConfig,
-		DueDate:      timestamppb.New(assignment.DueDate),
+		DueDate:      timestamppb.New(*assignment.DueDate),
 		CreatedAt:    timestamppb.New(assignment.CreatedAt),
 		UpdatedAt:    timestamppb.New(assignment.UpdatedAt),
 	}
@@ -583,14 +630,18 @@ func (s *serverAPI) ProvideFeedback(
 		feedbackPayload = make(models.JSONB)
 	}
 
+	dto := &models.FeedbackDTO{
+		VersionID:    versionID,
+		SubmissionID: submissionID,
+		TextContent:  req.GetTextContent(),
+		Payload:      feedbackPayload,
+		IsPublished:  req.GetIsPublished(),
+	}
+
 	err = s.feedbacks.Provide(
 		ctx,
 		userID,
-		submissionID,
-		versionID,
-		req.GetTextContent(),
-		feedbackPayload,
-		req.GetIsPublished(),
+		dto,
 	)
 	if err != nil {
 		if errors.Is(err, storage.ErrSubmissionVersionNotFound) {
@@ -641,7 +692,7 @@ func (s *serverAPI) ListMyAssignments(
 			Id:         item.ID.String(),
 			Title:      item.Title,
 			WidgetType: item.WidgetType,
-			DueDate:    timestamppb.New(item.DueDate),
+			DueDate:    timestamppb.New(*item.DueDate),
 		}
 		itemStatus := convertSubmissionStatus(item.Status)
 		hasFeedback := false
@@ -659,5 +710,111 @@ func (s *serverAPI) ListMyAssignments(
 	return &tasksv1.ListMyAssignmentsResponse{
 		Items:         items,
 		NextPageToken: token,
+	}, nil
+}
+
+func (s *serverAPI) StartAssignment(
+	ctx context.Context,
+	req *tasksv1.StartAssignmentRequest,
+) (*tasksv1.StartAssignmentResponse, error) {
+	userIDStr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
+	}
+
+	templateID, err := uuid.Parse(req.GetTemplateId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid template ID")
+	}
+
+	submissionID, startedAt, err := s.assignments.Start(
+		ctx,
+		userID,
+		templateID,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to start assignment")
+	}
+
+	return &tasksv1.StartAssignmentResponse{
+		SubmissionId: submissionID.String(),
+		StartedAt:    timestamppb.New(startedAt),
+	}, nil
+}
+
+func (s *serverAPI) SaveAssignmentDraft(
+	ctx context.Context,
+	req *tasksv1.SaveAssignmentDraftRequest,
+) (*tasksv1.SaveAssignmentDraftResponse, error) {
+	userIDStr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
+	}
+
+	var submissionPayload models.JSONB
+	if req.GetPayload() != nil {
+		submissionPayload = models.JSONB(req.GetPayload().AsMap())
+	} else {
+		submissionPayload = make(models.JSONB)
+	}
+
+	submissionVersionID, err := s.assignments.SaveDraft(
+		ctx,
+		userID,
+		submissionPayload,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to save assignment draft")
+	}
+
+	return &tasksv1.SaveAssignmentDraftResponse{
+		VersionId: submissionVersionID.String(),
+		SavedAt:   timestamppb.New(time.Now()),
+	}, nil
+}
+
+func (s *serverAPI) SubmitAssignment(
+	ctx context.Context,
+	req *tasksv1.SubmitAssignmentRequest,
+) (*tasksv1.SubmitAssignmentResponse, error) {
+	userIDStr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
+	}
+
+	var submissionPayload models.JSONB
+	if req.GetPayload() != nil {
+		submissionPayload = models.JSONB(req.GetPayload().AsMap())
+	} else {
+		submissionPayload = make(models.JSONB)
+	}
+
+	submissionID, submissionStatus, err := s.assignments.Submit(
+		ctx,
+		userID,
+		submissionPayload,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to submit assignment")
+	}
+
+	return &tasksv1.SubmitAssignmentResponse{
+		VersionId: submissionID.String(),
+		Status:    convertSubmissionStatus(submissionStatus),
 	}, nil
 }
