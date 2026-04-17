@@ -1,8 +1,11 @@
-.PHONY: generate
-generate-from-scratch:
+.PHONY: generate-protos generate-protos-fs lint-protos
+
+generate-protos-fs:
 	buf generate libs/protos
 	cd libs/gen/go && go mod init github.com/Kaptoshka/creative-learning-platform/libs/gen/go && go mod tidy
-generate:
+
+generate-protos:
 	buf generate libs/protos
-lint:
+
+lint-protos:
 	buf lint libs/protos

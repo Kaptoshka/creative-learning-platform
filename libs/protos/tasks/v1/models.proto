@@ -42,8 +42,8 @@ message AssignmentTemplate {
 
   google.protobuf.Timestamp due_date = 7;
 
-  google.protobuf.Timestamp created_at = 9;
-  google.protobuf.Timestamp updated_at = 10;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
 }
 
 message AssignmentTemplateLight {
@@ -82,6 +82,7 @@ message SubmissionVersion {
 
   bool is_autosave = 5;
   google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
 
 message Feedback {
@@ -94,4 +95,5 @@ message Feedback {
 
   bool is_published = 6;
   google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
 }
