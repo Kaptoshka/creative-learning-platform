@@ -16,3 +16,11 @@ type Feedback struct {
 	CreatedAt   time.Time `db:"created_at"`
 	UpdatedAt   time.Time `db:"updated_at"`
 }
+
+type FeedbackDTO struct {
+	VersionID    uuid.UUID `db:"version_id"`
+	SubmissionID uuid.UUID `db:"submission_id"`
+	TextContent  string    `db:"text_content"`
+	Payload      JSONB     `db:"payload"`
+	IsPublished  bool      `db:"is_published"`
+}
