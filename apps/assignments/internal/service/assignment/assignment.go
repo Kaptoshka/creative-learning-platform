@@ -8,8 +8,9 @@ import (
 
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/auth"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/dto"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/models"
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/services"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/service"
 
 	"github.com/google/uuid"
 )
@@ -78,7 +79,7 @@ func New(
 func (s *assignmentService) Create(
 	ctx context.Context,
 	creatorID uuid.UUID,
-	dto models.CreateAssignmentDTO,
+	dto dto.CreateAssignment,
 ) (uuid.UUID, error) {
 	const op = "services.assignment.Create"
 
@@ -137,7 +138,7 @@ func (s *assignmentService) Create(
 	return tmpl.ID, nil
 }
 
-func validateCreateTemplateDTO(dto models.CreateAssignmentDTO) error {
+func validateCreateTemplateDTO(dto dto.CreateAssignment) error {
 	if dto.Title == "" {
 		return domain.ErrTitleRequired
 	}
@@ -169,7 +170,7 @@ func (s *assignmentService) Update(
 	callerID uuid.UUID,
 	id uuid.UUID,
 	updates map[string]any,
-	targets []models.TargetDTO,
+	targets []dto.Target,
 ) (*models.AssignmentTemplate, error) {
 	const op = "services.assignment.UpdateAssignment"
 
@@ -278,7 +279,7 @@ func validateTemplateUpdates(updates map[string]any) error {
 	return nil
 }
 
-func validateTargets(targets []models.TargetDTO) error {
+func validateTargets(targets []dto.Target) error {
 	for i, t := range targets {
 		if t.GroupID == nil && t.StudentID == nil {
 			return fmt.Errorf("%w: target[%d]", domain.ErrTargetEmpty, i)
@@ -289,7 +290,7 @@ func validateTargets(targets []models.TargetDTO) error {
 
 func convertTargets(
 	templateID uuid.UUID,
-	targets []models.TargetDTO,
+	targets []dto.Target,
 ) []*models.AssignmentTarget {
 	now := time.Now().UTC()
 	result := make(
@@ -407,7 +408,7 @@ func (s *assignmentService) List(
 
 	creatorID := callerID
 
-	offset, err := services.DecodePageToken(pageToken)
+	offset, err := service.DecodePageToken(pageToken)
 	if err != nil {
 		log.Error(
 			"failed to decode page token",
@@ -417,7 +418,7 @@ func (s *assignmentService) List(
 		return nil, "", fmt.Errorf("%w", domain.ErrInvalidPageToken)
 	}
 
-	limit = services.NormalizeLimit(limit)
+	limit = service.NormalizeLimit(limit)
 
 	templates, total, err := s.assignmentProvider.List(ctx, creatorID, limit, offset)
 	if err != nil {
@@ -439,7 +440,7 @@ func (s *assignmentService) List(
 		})
 	}
 
-	nextToken := services.EncodePageToken(offset+len(templates), total)
+	nextToken := service.EncodePageToken(offset+len(templates), total)
 
 	log.Info(
 		"assignment templates listed successfully",

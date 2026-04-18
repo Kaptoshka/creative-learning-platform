@@ -7,6 +7,7 @@ import (
 
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/auth"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/dto"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/models"
 
 	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
@@ -23,13 +24,13 @@ type Assignments interface {
 	Create(
 		ctx context.Context,
 		creatorID uuid.UUID,
-		dto models.CreateAssignmentDTO,
+		dto *dto.CreateAssignment,
 	) (uuid.UUID, error)
 	Update(
 		ctx context.Context,
 		assignmentID uuid.UUID,
 		updates map[string]any,
-		targets []*models.TargetDTO,
+		targets []*dto.Target,
 	) (*models.AssignmentTemplate, error)
 	Delete(
 		ctx context.Context,
@@ -38,7 +39,7 @@ type Assignments interface {
 	GetByID(
 		ctx context.Context,
 		assignmentID uuid.UUID,
-	) (*models.AssignmentTemplate, []*models.TargetDTO, error)
+	) (*models.AssignmentTemplate, []*dto.Target, error)
 	List(
 		ctx context.Context,
 		creatorID uuid.UUID,
@@ -92,7 +93,7 @@ type Feedbacks interface {
 	Provide(
 		ctx context.Context,
 		graderID uuid.UUID,
-		dto *models.FeedbackDTO,
+		dto *dto.Feedback,
 	) error
 }
 
@@ -128,7 +129,7 @@ func (s *serverAPI) CreateAssignment(
 		return nil, status.Error(codes.InvalidArgument, "invalid user ID in token")
 	}
 
-	targets := make([]*models.TargetDTO, 0, len(req.Targets))
+	targets := make([]*dto.Target, 0, len(req.Targets))
 
 	for _, trg := range req.Targets {
 		target, err := processTarget(trg)
@@ -148,7 +149,7 @@ func (s *serverAPI) CreateAssignment(
 
 	dueTime := req.DueDate.AsTime()
 
-	assignmentDTO := models.CreateAssignmentDTO{
+	assignmentDTO := &dto.CreateAssignment{
 		Title:        req.Title,
 		Description:  req.Description,
 		WidgetID:     widgetID,
@@ -201,7 +202,7 @@ func (s *serverAPI) UpdateAssignment(
 		}
 	}
 
-	targets := make([]*models.TargetDTO, 0, len(req.Targets))
+	targets := make([]*dto.Target, 0, len(req.Targets))
 
 	for _, trg := range req.Targets {
 		target, err := processTarget(trg)
@@ -244,7 +245,7 @@ func (s *serverAPI) UpdateAssignment(
 
 func processTarget(
 	t *tasksv1.AssignmentTarget,
-) (*models.TargetDTO, error) {
+) (*dto.Target, error) {
 	switch v := t.GetTarget().(type) {
 	case *tasksv1.AssignmentTarget_GroupId:
 		groupID, err := uuid.Parse(v.GroupId)
@@ -252,7 +253,7 @@ func processTarget(
 			return nil, errors.New("invalid group ID")
 		}
 
-		return &models.TargetDTO{
+		return &dto.Target{
 			GroupID: &groupID,
 		}, nil
 	case *tasksv1.AssignmentTarget_StudentId:
@@ -261,7 +262,7 @@ func processTarget(
 			return nil, errors.New("invalid student ID")
 		}
 
-		return &models.TargetDTO{
+		return &dto.Target{
 			StudentID: &studentID,
 		}, nil
 
@@ -595,7 +596,7 @@ func (s *serverAPI) ProvideFeedback(
 		feedbackPayload = make(domain.JSONB)
 	}
 
-	dto := &models.FeedbackDTO{
+	dto := &dto.Feedback{
 		VersionID:    versionID,
 		SubmissionID: submissionID,
 		TextContent:  req.GetTextContent(),
