@@ -17,6 +17,11 @@ const (
 	StatusReturned     SubmissionStatus = "RETURNED"
 )
 
+const (
+	DefaultPageSizeLimit = 10
+	MaxPageSizeLimit     = 100
+)
+
 var validSubmissionStatuses = map[SubmissionStatus]struct{}{
 	StatusNotSpecified: {},
 	StatusNotStarted:   {},
@@ -26,14 +31,9 @@ var validSubmissionStatuses = map[SubmissionStatus]struct{}{
 	StatusReturned:     {},
 }
 
-func validateSubmissionStatus(s SubmissionStatus) error {
+func ValidateSubmissionStatus(s SubmissionStatus) error {
 	if _, ok := validSubmissionStatuses[s]; !ok {
 		return fmt.Errorf("%w: %q", ErrInvalidStatusFilter, s)
 	}
 	return nil
 }
-
-const (
-	DefaultPageSizeLimit = 10
-	MaxPageSizeLimit     = 100
-)

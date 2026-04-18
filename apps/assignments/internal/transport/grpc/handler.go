@@ -1,4 +1,4 @@
-package tasks
+package grpc
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/auth"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/models"
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage"
 
 	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
 	"github.com/google/uuid"
@@ -93,7 +92,6 @@ type Feedbacks interface {
 	Provide(
 		ctx context.Context,
 		graderID uuid.UUID,
-		// TODO: make FeedbackDTO
 		dto *models.FeedbackDTO,
 	) error
 }
@@ -292,7 +290,7 @@ func (s *serverAPI) DeleteAssignment(
 
 	err = s.assignments.Delete(ctx, assignmentID)
 	if err != nil {
-		if errors.Is(err, storage.ErrAssignmentNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "assignment not found")
 		}
 
@@ -319,7 +317,7 @@ func (s *serverAPI) GetAssignment(
 
 	assignment, targets, err := s.assignments.GetByID(ctx, assignmentID)
 	if err != nil {
-		if errors.Is(err, storage.ErrAssignmentNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "assignment with provided ID not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to retrieve assignment")
@@ -481,7 +479,7 @@ func (s *serverAPI) GetStudentSubmission(
 
 	assignment, submission, submissionVersions, feedbacks, err := s.submissions.GetByID(ctx, submissionID)
 	if err != nil {
-		if errors.Is(err, storage.ErrSubmissionNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "submission not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to retrieve data")
@@ -566,40 +564,6 @@ func (s *serverAPI) GetStudentSubmission(
 	}, nil
 }
 
-func convertSubmissionStatus(status domain.SubmissionStatus) tasksv1.SubmissionStatus {
-	switch status {
-	case domain.StatusNotStarted:
-		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_NOT_STARTED
-	case domain.StatusInProgress:
-		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_IN_PROGRESS
-	case domain.StatusSubmitted:
-		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_SUBMITTED
-	case domain.StatusGraded:
-		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_GRADED
-	case domain.StatusReturned:
-		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_RETURNED
-	default:
-		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED
-	}
-}
-
-func convertProtoStatus(status tasksv1.SubmissionStatus) domain.SubmissionStatus {
-	switch status {
-	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_NOT_STARTED:
-		return domain.StatusNotStarted
-	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_IN_PROGRESS:
-		return domain.StatusInProgress
-	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_SUBMITTED:
-		return domain.StatusSubmitted
-	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_GRADED:
-		return domain.StatusGraded
-	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_RETURNED:
-		return domain.StatusReturned
-	default:
-		return domain.StatusNotSpecified
-	}
-}
-
 func (s *serverAPI) ProvideFeedback(
 	ctx context.Context,
 	req *tasksv1.ProvideFeedbackRequest,
@@ -645,7 +609,7 @@ func (s *serverAPI) ProvideFeedback(
 		dto,
 	)
 	if err != nil {
-		if errors.Is(err, storage.ErrSubmissionVersionNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "submission version not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to provide feedback")
