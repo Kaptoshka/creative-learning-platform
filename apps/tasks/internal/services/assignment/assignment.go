@@ -6,9 +6,10 @@ import (
 	"log/slog"
 	"time"
 
-	"tasks/internal/auth"
-	"tasks/internal/domain/models"
-	"tasks/internal/services"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/auth"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/models"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/services"
 
 	"github.com/google/uuid"
 )
@@ -138,25 +139,25 @@ func (s *assignmentService) Create(
 
 func validateCreateTemplateDTO(dto models.CreateAssignmentDTO) error {
 	if dto.Title == "" {
-		return services.ErrTitleRequired
+		return domain.ErrTitleRequired
 	}
 	if dto.WidgetID == uuid.Nil {
-		return services.ErrWidgetIDRequired
+		return domain.ErrWidgetIDRequired
 	}
 
 	if dto.DueDate != nil {
 		deadline := dto.DueDate.Add(-cutoffDuration)
 		if !deadline.After(time.Now().UTC()) {
-			return services.ErrDueDateTooClose
+			return domain.ErrDueDateTooClose
 		}
 	}
 
 	if len(dto.Targets) == 0 {
-		return services.ErrTargetsRequired
+		return domain.ErrTargetsRequired
 	}
 	for i, t := range dto.Targets {
 		if t.GroupID == nil && t.StudentID == nil {
-			return fmt.Errorf("%w: target[%d]", services.ErrTargetEmpty, i)
+			return fmt.Errorf("%w: target[%d]", domain.ErrTargetEmpty, i)
 		}
 	}
 
@@ -195,7 +196,7 @@ func (s *assignmentService) Update(
 		)
 		return nil, fmt.Errorf(
 			"user is not allowed to update this assignment: %w",
-			services.ErrForbidden,
+			domain.ErrForbidden,
 		)
 	}
 
@@ -240,37 +241,37 @@ func (s *assignmentService) Update(
 
 func validateTemplateUpdates(updates map[string]any) error {
 	if len(updates) == 0 {
-		return services.ErrNoUpdates
+		return domain.ErrNoUpdates
 	}
 
 	if v, ok := updates["title"]; ok {
 		title, ok := v.(string)
 		if !ok || title == "" {
-			return services.ErrTitleRequired
+			return domain.ErrTitleRequired
 		}
 	}
 
 	if v, ok := updates["widget_id"]; ok {
 		wid, ok := v.(uuid.UUID)
 		if !ok || wid == uuid.Nil {
-			return services.ErrWidgetIDRequired
+			return domain.ErrWidgetIDRequired
 		}
 	}
 
 	if v, ok := updates["due_date"]; ok && v != nil {
 		dueDate, ok := v.(time.Time)
 		if !ok {
-			return services.ErrInvalidDueDate
+			return domain.ErrInvalidDueDate
 		}
 		deadline := dueDate.Add(-cutoffDuration)
 		if !deadline.After(time.Now().UTC()) {
-			return services.ErrDueDateTooClose
+			return domain.ErrDueDateTooClose
 		}
 	}
 
 	for _, forbidden := range []string{"id", "creator_id", "created_at"} {
 		if _, ok := updates[forbidden]; ok {
-			return fmt.Errorf("%w: %s", services.ErrForbiddenField, forbidden)
+			return fmt.Errorf("%w: %s", domain.ErrForbiddenField, forbidden)
 		}
 	}
 
@@ -280,7 +281,7 @@ func validateTemplateUpdates(updates map[string]any) error {
 func validateTargets(targets []models.TargetDTO) error {
 	for i, t := range targets {
 		if t.GroupID == nil && t.StudentID == nil {
-			return fmt.Errorf("%w: target[%d]", services.ErrTargetEmpty, i)
+			return fmt.Errorf("%w: target[%d]", domain.ErrTargetEmpty, i)
 		}
 	}
 	return nil
@@ -349,7 +350,7 @@ func (s *assignmentService) DeleteAssignment(
 			"assignment_id",
 			id.String(),
 		)
-		return fmt.Errorf("user is not allowed to delete assignment: %w", services.ErrForbidden)
+		return fmt.Errorf("user is not allowed to delete assignment: %w", domain.ErrForbidden)
 	}
 
 	if err := s.assignmentSaver.DeleteAssignment(ctx, id); err != nil {
@@ -393,4 +394,60 @@ func (s *assignmentService) GetTemplate(
 	)
 
 	return tmpl, targets, nil
+}
+
+func (s *assignmentService) List(
+	ctx context.Context,
+	callerID uuid.UUID,
+	limit int,
+	pageToken string,
+) ([]models.AssignmentTemplateLight, string, error) {
+	const op = "services.assignment.ListTemplates"
+	log := s.log.With(slog.String("op", op))
+
+	creatorID := callerID
+
+	offset, err := services.DecodePageToken(pageToken)
+	if err != nil {
+		log.Error(
+			"failed to decode page token",
+			"caller_id", callerID.String(),
+			"page_token", pageToken,
+		)
+		return nil, "", fmt.Errorf("%w", domain.ErrInvalidPageToken)
+	}
+
+	limit = services.NormalizeLimit(limit)
+
+	templates, total, err := s.assignmentProvider.List(ctx, creatorID, limit, offset)
+	if err != nil {
+		log.Error(
+			"failed to list assignment templates",
+			"creator_id", creatorID.String(),
+			"limit", limit,
+			"offset", offset,
+		)
+		return nil, "", fmt.Errorf("%w", err)
+	}
+
+	light := make([]models.AssignmentTemplateLight, 0, len(templates))
+	for _, t := range templates {
+		light = append(light, models.AssignmentTemplateLight{
+			ID:      t.ID,
+			Title:   t.Title,
+			DueDate: t.DueDate,
+		})
+	}
+
+	nextToken := services.EncodePageToken(offset+len(templates), total)
+
+	log.Info(
+		"assignment templates listed successfully",
+		"creator_id", creatorID.String(),
+		"returned", len(templates),
+		"total", total,
+		"offset", offset,
+	)
+
+	return light, nextToken, nil
 }
