@@ -1,4 +1,4 @@
-package services
+package domain
 
 import (
 	"errors"
@@ -17,4 +17,8 @@ var (
 	ErrNoUpdates      = errors.New("no fields to update")
 	ErrInvalidDueDate = errors.New("due_date has invalid type")
 	ErrForbiddenField = errors.New("field cannot be updated directly")
+
+	ErrInvalidPageToken = errors.New("invalid or malformed page token")
+
+	ErrInvalidStatusFilter = errors.New("invalid submission status filter")
 )

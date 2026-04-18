@@ -1,6 +1,8 @@
 package models
 
 import (
+	"tasks/internal/domain"
+
 	"github.com/google/uuid"
 )
 
@@ -8,6 +10,6 @@ type Widget struct {
 	ID               uuid.UUID `db:"id"`
 	Type             string    `db:"type"`
 	Version          int       `db:"version"`
-	ConfigSchema     JSONB     `db:"config_schema"`
-	SubmissionSchema JSONB     `db:"submission_schema"`
+	ConfigSchema     domain.JSONB     `db:"config_schema"`
+	SubmissionSchema domain.JSONB     `db:"submission_schema"`
 }
