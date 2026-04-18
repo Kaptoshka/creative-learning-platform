@@ -1,8 +1,9 @@
 package models
 
 import (
-	"tasks/internal/domain"
 	"time"
+
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
 
 	"github.com/google/uuid"
 )

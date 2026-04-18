@@ -1,4 +1,4 @@
-module tasks
+module github.com/Kaptoshka/creative-learning-platform/assignment-service
 
 go 1.26.1
 

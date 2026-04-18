@@ -3,7 +3,7 @@ package grpcapp
 import (
 	"log/slog"
 
-	tasksgrpc "tasks/internal/grpc/tasks"
+	tasksgrpc "github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/transport/grpc/server"
 
 	"google.golang.org/grpc"
 )

@@ -3,10 +3,10 @@ package app
 import (
 	"log/slog"
 
-	grpcapp "tasks/internal/app/grpc"
-	"tasks/internal/services/assignment"
-	"tasks/internal/services/submission"
-	"tasks/internal/storage/postgres"
+	grpcapp "github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/app/grpc"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/services/assignment"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/services/submission"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres"
 )
 
 type App struct {

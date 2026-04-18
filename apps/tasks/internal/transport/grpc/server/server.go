@@ -5,9 +5,10 @@ import (
 	"errors"
 	"time"
 
-	"tasks/internal/auth"
-	"tasks/internal/domain/models"
-	"tasks/internal/storage"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/auth"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/models"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage"
 
 	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
 	"github.com/google/uuid"
@@ -50,7 +51,7 @@ type Assignments interface {
 		userID uuid.UUID,
 		pageSize int32,
 		pageToken string,
-		statusFilter models.SubmissionStatus,
+		statusFilter domain.SubmissionStatus,
 	) ([]*models.AssignmentTemplateLight, string, error)
 	Start(
 		ctx context.Context,
@@ -60,13 +61,13 @@ type Assignments interface {
 	SaveDraft(
 		ctx context.Context,
 		studentID uuid.UUID,
-		payload models.JSONB,
+		payload domain.JSONB,
 	) (uuid.UUID, error)
 	Submit(
 		ctx context.Context,
 		studentID uuid.UUID,
-		payload models.JSONB,
-	) (uuid.UUID, models.SubmissionStatus, error)
+		payload domain.JSONB,
+	) (uuid.UUID, domain.SubmissionStatus, error)
 }
 
 type Submissions interface {
@@ -145,7 +146,7 @@ func (s *serverAPI) CreateAssignment(
 		return nil, status.Error(codes.InvalidArgument, "parsing widget ID error")
 	}
 
-	widgetConfig := models.JSONB(req.WidgetConfig.AsMap())
+	widgetConfig := domain.JSONB(req.WidgetConfig.AsMap())
 
 	dueTime := req.DueDate.AsTime()
 
@@ -390,7 +391,7 @@ func (s *serverAPI) ListAssignments(
 
 	limit := req.PageSize
 	if limit <= 0 {
-		limit = models.DefaultPageSizeLimit
+		limit = domain.DefaultPageSizeLimit
 	}
 
 	assignments, token, err := s.assignments.List(ctx, targetID, limit, req.PageToken)
@@ -426,7 +427,7 @@ func (s *serverAPI) ListAssignmentSubmissions(
 
 	limit := req.PageSize
 	if limit <= 0 {
-		limit = models.DefaultPageSizeLimit
+		limit = domain.DefaultPageSizeLimit
 	}
 
 	submissions, token, err := s.submissions.ListByTemplateID(ctx, templateID, limit, req.PageToken)
@@ -565,37 +566,37 @@ func (s *serverAPI) GetStudentSubmission(
 	}, nil
 }
 
-func convertSubmissionStatus(status models.SubmissionStatus) tasksv1.SubmissionStatus {
+func convertSubmissionStatus(status domain.SubmissionStatus) tasksv1.SubmissionStatus {
 	switch status {
-	case models.StatusNotStarted:
+	case domain.StatusNotStarted:
 		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_NOT_STARTED
-	case models.StatusInProgress:
+	case domain.StatusInProgress:
 		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_IN_PROGRESS
-	case models.StatusSubmitted:
+	case domain.StatusSubmitted:
 		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_SUBMITTED
-	case models.StatusGraded:
+	case domain.StatusGraded:
 		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_GRADED
-	case models.StatusReturned:
+	case domain.StatusReturned:
 		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_RETURNED
 	default:
 		return tasksv1.SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED
 	}
 }
 
-func convertProtoStatus(status tasksv1.SubmissionStatus) models.SubmissionStatus {
+func convertProtoStatus(status tasksv1.SubmissionStatus) domain.SubmissionStatus {
 	switch status {
 	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_NOT_STARTED:
-		return models.StatusNotStarted
+		return domain.StatusNotStarted
 	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_IN_PROGRESS:
-		return models.StatusInProgress
+		return domain.StatusInProgress
 	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_SUBMITTED:
-		return models.StatusSubmitted
+		return domain.StatusSubmitted
 	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_GRADED:
-		return models.StatusGraded
+		return domain.StatusGraded
 	case tasksv1.SubmissionStatus_SUBMISSION_STATUS_RETURNED:
-		return models.StatusReturned
+		return domain.StatusReturned
 	default:
-		return models.StatusNotSpecified
+		return domain.StatusNotSpecified
 	}
 }
 
@@ -623,11 +624,11 @@ func (s *serverAPI) ProvideFeedback(
 		return nil, status.Error(codes.InvalidArgument, "invalid submission version ID")
 	}
 
-	var feedbackPayload models.JSONB
+	var feedbackPayload domain.JSONB
 	if req.GetPayload() != nil {
-		feedbackPayload = models.JSONB(req.GetPayload().AsMap())
+		feedbackPayload = domain.JSONB(req.GetPayload().AsMap())
 	} else {
-		feedbackPayload = make(models.JSONB)
+		feedbackPayload = make(domain.JSONB)
 	}
 
 	dto := &models.FeedbackDTO{
@@ -669,7 +670,7 @@ func (s *serverAPI) ListMyAssignments(
 
 	limit := req.GetPageSize()
 	if limit <= 0 {
-		limit = models.DefaultPageSizeLimit
+		limit = domain.DefaultPageSizeLimit
 	}
 
 	statusFilter := convertProtoStatus(req.GetStatusFilter())
@@ -696,7 +697,7 @@ func (s *serverAPI) ListMyAssignments(
 		}
 		itemStatus := convertSubmissionStatus(item.Status)
 		hasFeedback := false
-		if item.Status == models.StatusGraded || item.Status == models.StatusReturned {
+		if item.Status == domain.StatusGraded || item.Status == domain.StatusReturned {
 			hasFeedback = true
 		}
 
@@ -761,11 +762,11 @@ func (s *serverAPI) SaveAssignmentDraft(
 		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
 	}
 
-	var submissionPayload models.JSONB
+	var submissionPayload domain.JSONB
 	if req.GetPayload() != nil {
-		submissionPayload = models.JSONB(req.GetPayload().AsMap())
+		submissionPayload = domain.JSONB(req.GetPayload().AsMap())
 	} else {
-		submissionPayload = make(models.JSONB)
+		submissionPayload = make(domain.JSONB)
 	}
 
 	submissionVersionID, err := s.assignments.SaveDraft(
@@ -797,11 +798,11 @@ func (s *serverAPI) SubmitAssignment(
 		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
 	}
 
-	var submissionPayload models.JSONB
+	var submissionPayload domain.JSONB
 	if req.GetPayload() != nil {
-		submissionPayload = models.JSONB(req.GetPayload().AsMap())
+		submissionPayload = domain.JSONB(req.GetPayload().AsMap())
 	} else {
-		submissionPayload = make(models.JSONB)
+		submissionPayload = make(domain.JSONB)
 	}
 
 	submissionID, submissionStatus, err := s.assignments.Submit(

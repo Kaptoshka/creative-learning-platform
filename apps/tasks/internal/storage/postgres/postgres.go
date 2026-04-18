@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"tasks/internal/storage"
-	"tasks/internal/storage/postgres/assignment"
-	"tasks/internal/storage/postgres/submission"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres/assignment"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres/submission"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
