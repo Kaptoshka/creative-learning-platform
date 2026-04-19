@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styles from "./SubmissionsPage.module.scss";
 import apiClient from "@/services/apiClient";
-import { AuthContext } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import Button from "@/components/Button/Button.jsx";
 
 const SubmissionsPage = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [submissions, setSubmissions] = useState([]);
   const [filter, setFilter] = useState("all");

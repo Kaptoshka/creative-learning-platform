@@ -1,37 +1,27 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock, User } from "lucide-react";
-// import TaskCard from "../components/TaskCard";
 import Modal from "@/components/Modal";
-import { AuthContext } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useFetch } from "@/hooks/useFetch";
 import apiClient from "@/services/apiClient";
+import Loading from "@/components/ui/Loading";
+import ErrorMessage from "@/components/ui/ErrorMessage";
 
 const TeacherDashboardPage = () => {
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
+
+  const url = user ? `/assignments/student/${user.id}` : null;
+  const { data, loading, error } = useFetch(url);
 
   useEffect(() => {
-    if (!user) return;
-
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        const response = await apiClient.get(`/assignments/student/${user.id}`);
-        setTasks(response.data.assignments || []);
-      } catch (err) {
-        setError("Failed to load tasks.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTasks();
-  }, [user]);
+    if (data && data.assignments) {
+      setTasks(data.assignments || []);
+    }
+  }, [data]);
 
   // Подготовка данных для Modal
   const modalStats = selectedTask
@@ -82,11 +72,11 @@ const TeacherDashboardPage = () => {
     : [];
 
   if (loading) {
-    return <div className="tasks-page">Загрузка...</div>;
+    return <Loading text="Загрузка..." fullPage />;
   }
 
   if (error) {
-    return <div className="tasks-page error-message">{error}</div>;
+    return <ErrorMessage error={error} />;
   }
 
   return (

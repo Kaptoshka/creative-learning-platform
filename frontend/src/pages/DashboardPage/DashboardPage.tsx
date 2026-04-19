@@ -1,6 +1,6 @@
-import React, { useContext, useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { AuthContext } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import TasksPage from "@/pages/TasksPage";
 import Button from "@/components/Button";
 import styles from "./DashboardPage.module.scss";
@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 const DashboardPage = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
 

@@ -1,46 +1,36 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Clock, User, BookOpen, CheckCircle } from "lucide-react";
 import TaskCard from "@/components/TaskCard";
 import Modal from "@/components/Modal";
-import { AuthContext } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useFetch } from "@/hooks/useFetch";
 import apiClient from "@/services/apiClient";
+import Loading from "@/components/ui/Loading";
+import ErrorMessage from "@/components/ui/ErrorMessage";
 
 import styles from "./TasksPage.module.scss";
 import dashboardStyles from "@/pages/DashboardPage/DashboardPage.module.scss";
 
 const TasksPage = () => {
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
+
+  const url = user
+    ? user.role === "student"
+      ? `/assignments/student/${user.id}`
+      : `/assignments/teacher/${user.id}`
+    : null;
+
+  const { data, loading, error, refetch } = useFetch(url);
 
   useEffect(() => {
-    if (!user) return;
-
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        const request =
-          user.role === "student"
-            ? `/assignments/student/${user.id}`
-            : `/assignments/teacher/${user.id}`;
-        console.log(request);
-        const response = await apiClient.get(request);
-        setTasks(response.data || []);
-        console.log(response.data);
-      } catch (err) {
-        setError("Failed to load tasks.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTasks();
-  }, [user]);
+    if (data) {
+      setTasks(data || []);
+    }
+  }, [data]);
 
   const modalStats = selectedTask
     ? [
@@ -105,11 +95,11 @@ const TasksPage = () => {
     : [];
 
   if (loading) {
-    return <div className={styles.tasksPage}>Загрузка...</div>;
+    return <Loading text="Загрузка заданий..." />;
   }
 
   if (error) {
-    return <div className={`${styles.tasksPage} error-message`}>{error}</div>;
+    return <ErrorMessage error={error} />;
   }
 
   return (
