@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"time"
 )
 
 type JSONB map[string]any
@@ -20,6 +21,10 @@ const (
 const (
 	DefaultPageSizeLimit = 10
 	MaxPageSizeLimit     = 100
+)
+
+const (
+	CutoffDuration = 5 * time.Minute
 )
 
 var validSubmissionStatuses = map[SubmissionStatus]struct{}{

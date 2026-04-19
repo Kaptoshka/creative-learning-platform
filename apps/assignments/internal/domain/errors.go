@@ -31,4 +31,7 @@ var (
 
 	// submission status
 	ErrInvalidStatusFilter = errors.New("invalid submission status filter")
+
+	ErrSubmissionClosed       = errors.New("submission is not open for editing")
+	ErrSubmissionNotSubmitted = errors.New("submission has not been submitted yet")
 )

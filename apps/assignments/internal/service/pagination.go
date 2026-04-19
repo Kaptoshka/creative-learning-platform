@@ -17,12 +17,12 @@ func NormalizeLimit(limit int) int {
 	return limit
 }
 
-func EncodePageToken(nextOffset, total int) string {
-	if nextOffset >= total {
+func EncodePageToken(offset, returned, limit int) string {
+	if returned < limit {
 		return ""
 	}
 	return base64.StdEncoding.EncodeToString(
-		[]byte(strconv.Itoa(nextOffset)),
+		[]byte(strconv.Itoa(offset + returned)),
 	)
 }
 
