@@ -1,0 +1,33 @@
+.quickStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  &Card {
+    background: var(--surface-color);
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+  }
+
+  &Header {
+    margin-bottom: 0.5rem;
+  }
+
+  &Icon {
+    color: var(--primary-color);
+  }
+
+  &Value {
+    font-size: var(--font-xl);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  &Label {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+  }
+}
