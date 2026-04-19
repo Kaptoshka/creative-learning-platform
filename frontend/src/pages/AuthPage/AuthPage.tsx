@@ -115,18 +115,18 @@ const AuthPage = () => {
     return (
         <div className={styles.authPage}>
             <form onSubmit={handleSubmit} noValidate>
-                <div className={styles.authPageHeader}>
-                    <BookOpen className={styles.authPageLogo} />
-                    <h2 className={styles.authPageTitle}>{title}</h2>
-                    <p className={styles.authPageSubtitle}>
-                        {isLoginMode
-                            ? "Добро пожаловать обратно!"
-                            : "Присоединяйтесь к нам!"}
-                    </p>
-                </div>
-                {error && <p className="error-message">{error}</p>}
-                <div className={styles.authPageFormContainer}>
-                    <div className={styles.authForm}>
+                <div className={styles.authForm}>
+                    <div className={styles.authPageHeader}>
+                        <BookOpen className={styles.authPageLogo} />
+                        <h2 className={styles.authPageTitle}>{title}</h2>
+                        <p className={styles.authPageSubtitle}>
+                            {isLoginMode
+                                ? "Добро пожаловать обратно!"
+                                : "Присоединяйтесь к нам!"}
+                        </p>
+                    </div>
+                    {error && <p className="error-message">{error}</p>}
+                    <div className={styles.authPageFormContainer}>
                         <div className={styles.authFormContent}>
                             <div className={styles.authFormColumns}>
                                 {!isLoginMode && (
