@@ -1,0 +1,135 @@
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal__content {
+    background: white;
+    border-radius: 16px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal__title {
+    margin: 0;
+    font-size: var(--font-xl);
+    font-weight: 600;
+    color: #333;
+}
+
+.modal__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.modal__close:hover {
+    background-color: #f5f5f5;
+}
+
+.modal__close-icon {
+    width: 20px;
+    height: 20px;
+    color: #666;
+}
+
+.modal__body {
+    padding: 24px;
+}
+
+.modal__description {
+    margin: 0 0 24px 0;
+    color: #666;
+    font-size: var(--font-base);
+    line-height: 1.5;
+}
+
+.modal__stats {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 16px;
+    background: #f8f9fa;
+}
+
+.stat-card__icon {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.stat-card__icon-svg {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    color: #666;
+}
+
+.stat-card__label {
+    font-size: var(--font-sm);
+    font-weight: 500;
+    color: #666;
+}
+
+.stat-card__value {
+    margin: 0;
+    font-size: var(--font-base);
+    font-weight: 600;
+}
+
+.stat-card__value--blue {
+    color: #0066cc;
+}
+
+.stat-card__value--purple {
+    color: #6f42c1;
+}
+
+.stat-card__value--green {
+    color: #28a745;
+}
+
+.modal__footer {
+    padding: 24px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 639px) {
+    .modal__footer {
+        flex-direction: column;
+    }
+
+    .modal__stats {
+        grid-template-columns: 1fr;
+    }
+}

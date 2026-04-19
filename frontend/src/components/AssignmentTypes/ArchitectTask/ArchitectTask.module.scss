@@ -1,0 +1,373 @@
+.taskPage {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    animation: fadeIn 0.4s ease;
+}
+
+// ─── Header ───────────────────────────────────────────────────
+.header {
+    margin-bottom: 2rem;
+
+    &__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f3e8ff;
+        color: var(--purple-color);
+        font-size: var(--font-xs);
+        font-weight: 500;
+        padding: 0.35rem 0.875rem;
+        border-radius: 9999px;
+        margin-bottom: 1rem;
+    }
+
+    &__title {
+        font-size: var(--font-2xl);
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.25;
+        margin-bottom: 0.75rem;
+    }
+
+    &__description {
+        font-size: var(--font-base);
+        color: var(--text-secondary);
+        line-height: 1.7;
+        max-width: 680px;
+    }
+}
+
+// ─── Divider ──────────────────────────────────────────────────
+.divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 2rem 0;
+}
+
+// ─── Phase wrapper ────────────────────────────────────────────
+.phase {
+    margin-bottom: 2rem;
+}
+
+.stepHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.stepBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    background: #f3e8ff;
+    color: var(--purple-color);
+    border-radius: 50%;
+    font-size: var(--font-sm);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.stepTitle {
+    font-size: var(--font-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.stepHint {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+// ─── Progress bar ─────────────────────────────────────────────
+.progressBar {
+    width: 100%;
+    height: 0.375rem;
+    background: var(--border-color);
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+
+    &__fill {
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            var(--purple-color) 0%,
+            var(--success-color) 100%
+        );
+        border-radius: 9999px;
+        transition: width 0.35s ease;
+    }
+}
+
+// ─── Nouns grid ───────────────────────────────────────────────
+.nounsGrid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+
+    @media (max-width: 600px) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.nounSlot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    &__index {
+        font-size: var(--font-xs);
+        font-weight: 500;
+        color: var(--text-muted);
+    }
+
+    &__input {
+        appearance: none;
+        width: 100%;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        font-size: var(--font-sm);
+        color: var(--text-primary);
+        background: var(--surface-color);
+        transition: all 0.2s ease;
+
+        &::placeholder {
+            color: var(--text-muted);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--purple-color);
+            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.12);
+        }
+
+        &--filled {
+            border-color: #4ade80;
+            background-color: #f0fdf4;
+            color: var(--success-color);
+            font-weight: 500;
+        }
+    }
+}
+
+// ─── Example tags ─────────────────────────────────────────────
+.exampleRow {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.exampleTag {
+    font-size: var(--font-xs);
+    color: var(--purple-color);
+    background: #f3e8ff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.15s;
+
+    &:hover {
+        background: #e9d5ff;
+    }
+}
+
+// ─── Buttons ──────────────────────────────────────────────────
+.btnRow {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius);
+    font-size: var(--font-sm);
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: var(--background-color);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    &:active {
+        transform: scale(0.98);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    &--primary {
+        background: var(--purple-color);
+        color: #ffffff;
+        border-color: var(--purple-color);
+
+        &:hover {
+            background: #7e22ce;
+            border-color: #7e22ce;
+        }
+    }
+
+    &--success {
+        background: var(--success-color);
+        color: #ffffff;
+        border-color: var(--success-color);
+
+        &:hover {
+            background: var(--success-dark);
+            border-color: var(--success-dark);
+        }
+    }
+}
+
+.spinnerInline {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #e9d5ff;
+    border-top-color: var(--purple-color);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+// ─── Project area ─────────────────────────────────────────────
+.projectArea {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    min-height: 80px;
+    margin-top: 1rem;
+}
+
+.emptyHint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+    padding: 1.5rem 0;
+}
+
+.roomList {
+    display: grid;
+    gap: 0.75rem;
+}
+
+$card-colors: (
+    0: #9333ea,
+    1: #16a34a,
+    2: #d97706,
+    3: #dc2626,
+    4: #2563eb,
+    5: #0d9488,
+    6: #db2777,
+);
+
+.roomCard {
+    background: var(--background-color);
+    border-radius: var(--radius);
+    padding: 0.875rem 1rem;
+    border-left: 3px solid var(--purple-color);
+    animation: fadeInUp 0.3s ease both;
+
+    &__tag {
+        display: inline-block;
+        background: #f3e8ff;
+        color: #6b21a8;
+        font-size: var(--font-xs);
+        font-weight: 600;
+        padding: 0.2rem 0.625rem;
+        border-radius: 9999px;
+        margin-bottom: 0.5rem;
+    }
+
+    &__idea {
+        font-size: var(--font-sm);
+        color: var(--text-primary);
+        line-height: 1.65;
+    }
+}
+
+// ─── User textarea ────────────────────────────────────────────
+.userProjectArea {
+    margin-top: 0.75rem;
+
+    textarea {
+        appearance: none;
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        font-size: var(--font-sm);
+        color: var(--text-primary);
+        background: var(--surface-color);
+        resize: vertical;
+        min-height: 130px;
+        font-family: inherit;
+        line-height: 1.7;
+        transition: all 0.2s ease;
+
+        &::placeholder {
+            color: var(--text-muted);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--purple-color);
+            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+        }
+    }
+}
+
+// ─── Footer note ──────────────────────────────────────────────
+.footerNote {
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    margin-top: 1.5rem;
+    line-height: 1.65;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+// ─── Status message ───────────────────────────────────────────
+.statusMessage {
+    margin-top: 1rem;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius);
+    font-size: var(--font-sm);
+    font-weight: 500;
+    animation: slideIn 0.3s ease;
+
+    &--success {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    &--error {
+        background-color: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+}

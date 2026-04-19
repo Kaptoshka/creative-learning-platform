@@ -1,0 +1,106 @@
+.auth-page {
+    min-height: 100vh;
+    width: 100%;
+    background-color: var(--background-color);
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.5rem 3rem;
+    max-width: none;
+    margin: 0 auto;
+
+    @media (min-width: 1024px) {
+        padding: 3rem 2rem;
+    }
+
+    &__header {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    &__logo {
+        height: 3rem;
+        width: 3rem;
+        color: var(--primary-color);
+        margin: 0 auto;
+    }
+
+    &__title {
+        text-align: center;
+        margin-top: 1.5rem;
+        font-size: var(--font-2xl);
+        font-weight: 700;
+        color: var(--text-primary);
+        width: fit-content;
+        view-transition-name: auth-title;
+    }
+
+    &__subtitle {
+        margin-top: 0.5rem;
+        font-size: var(--font-sm);
+        color: var(--text-secondary);
+        view-transition-name: auth-subtitle;
+    }
+
+    &__form_container {
+        width: 100%;
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+}
+
+.auth-form {
+    background-color: var(--surface-color);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-lg);
+    animation: fadeIn 0.3s ease-out;
+
+    &__content {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    &__footer {
+        margin-top: 1.5rem;
+        text-align: center;
+    }
+
+    &__switch {
+        font-size: var(--font-sm);
+        color: var(--primary-color);
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-decoration: underline;
+
+        &:hover {
+            color: var(--primary-dark);
+        }
+    }
+
+    &__columns {
+        display: flex;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem 1.5rem;
+    }
+
+    &__column {
+        display: block;
+        width: 100%;
+        gap: 1.5rem;
+    }
+
+    view-transition-name: auth-card;
+}
+
+@media (min-width: 640px) {
+    .auth-form {
+        padding: 2.5rem;
+    }
+}

@@ -1,0 +1,158 @@
+.navigation {
+    background-color: var(--primary-color);
+    color: white;
+
+    &__container {
+        max-width: none;
+        margin: 0 auto;
+        padding: 0 1rem;
+
+        @media (min-width: 640px) {
+            padding: 0 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            padding: 0 2rem;
+        }
+    }
+
+    &__content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 4rem;
+    }
+
+    &__logo {
+        display: flex;
+        align-items: center;
+
+        &-icon {
+            height: 2rem;
+            width: 2rem;
+            margin-right: 0.5rem;
+        }
+
+        &-text {
+            font-weight: 700;
+            font-size: var(--font-lg);
+        }
+    }
+
+    &__menu {
+        display: none;
+        align-items: center;
+        gap: 1rem;
+
+        @media (min-width: 768px) {
+            display: flex;
+        }
+    }
+
+    &__button {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--radius);
+        font-size: var(--font-sm);
+        font-weight: 500;
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        &--active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        &-icon {
+            height: 1rem;
+            width: 1rem;
+            margin-right: 0.25rem;
+        }
+    }
+
+    &__mobile-toggle {
+        display: block;
+
+        @media (min-width: 768px) {
+            display: none;
+        }
+    }
+
+    &__mobile-button {
+        padding: 0.5rem;
+        border-radius: var(--radius);
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    }
+
+    &__mobile-icon {
+        height: 1.5rem;
+        width: 1.5rem;
+    }
+
+    &__mobile-menu {
+        display: block;
+        padding: 0.5rem 0.5rem 0.75rem 0.5rem;
+
+        @media (min-width: 768px) {
+            display: none;
+        }
+    }
+
+    &__mobile-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.75rem;
+        font-size: var(--font-base);
+        font-weight: 500;
+        background: none;
+        border: none;
+        color: white;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    }
+}
+
+@media (min-width: 640px) {
+  .navigation_container {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .navigation_container {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .navigation_menu {
+    display: flex;
+  }
+}
+
+@media (min-width: 768px) {
+  .navigation_mobile_menu {
+    display: none;
+  }
+}
