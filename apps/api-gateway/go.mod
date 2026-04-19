@@ -1,4 +1,4 @@
-module api-gateway
+module github.com/Kaptoshka/creative-learning-platform/gateway
 
 go 1.25.5
 

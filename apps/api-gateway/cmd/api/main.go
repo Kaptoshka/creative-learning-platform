@@ -1,38 +1,105 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"api-gateway/internal/app"
-	"api-gateway/internal/config"
-)
+	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/sso/v1"
+	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
 
-const (
-	envLocal = "local"
-	envDev   = "dev"
-	envProd  = "prod"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/app"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/config"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/handlers"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/middleware"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/router"
+	grpcadapters "github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/outgoing/grpc"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
 	cfg := config.MustLoad()
 
-	log := setupLogger(cfg.Env)
+	logger := setupLogger(cfg.Env)
 
-	log.Info("API Gateway started", slog.String("env", cfg.Env))
+	ssoConn := mustDial(cfg.Clients.SSO)
+	defer ssoConn.Close()
 
-	application := app.New(log)
+	assignmentsConn := mustDial(cfg.Clients.Assignments)
+	defer AssignmentsConn.Close()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+	ssoClient := ssov1.NewAuthServiceClient(ssoConn)
+	assignmentsClient := tasksv1.NewAssignmentsServiceClient(assignmentsConn)
 
-	sysSign := <-stop
+	ssoAdapter := grpcadapters.NewSSOAdapter(ssoClient)
+	assignmentsAdapter := grpcadapters.NewAssignmentsAdapter(assignmentsClient)
 
-	log.Info("stopping API Gateway", slog.String("signal", sysSign.String()))
+	ssoUseCase := app.NewSSOUseCase(ssoAdapter)
+	assignmentsUseCase := app.NewAssignmentsUseCase(assignmentsAdapter)
 
-	log.Info("API Gateway stopped")
+	ssoHandler := handlers.NewSSOHandler(ssoUseCase)
+	assignmentsHandler := handlers.NewAssignmentsHandler(assignmentsUseCase)
+
+	mw := middleware.New(cfg)
+
+	r := router.New(ssoHandler, assignmentsHandler, mw)
+
+	srv := &http.Server{
+		Addr:         cfg.HTTPServer.Address,
+		Handler:      r,
+		ReadTimeout:  cfg.HTTPServer.Timeout,
+		WriteTimeout: cfg.HTTPServer.Timeout * 3,
+		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		slog.Info("gateway starting", "addr", cfg.HTTPServer.Address, "env", cfg.Env, "version", cfg.Version)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("server error", "err", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-quit
+	slog.Info("shutting down gateway...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.HTTPServer.Timeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("forced shutdown", "err", err)
+	}
+
+	slog.Info("gateway stopped")
+}
+
+func mustDial(client config.GRPCClient) *grpc.ClientConn {
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	if !client.Insecure {
+		slog.Warn("insecure=false but TLS not configured, falling back to insecure", "addr", client.Address)
+	}
+
+	conn, err := grpc.NewClient(client.Address, opts...)
+	if err != nil {
+		slog.Error("failed to connect to gRPC service", "addr", client.Address, "err", err)
+		os.Exit(1)
+	}
+
+	slog.Info("gRPC client created", "addr", client.Address)
+	return conn
 }
 
 // setupLogger creates a new logger instance based on the environment.
