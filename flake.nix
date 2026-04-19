@@ -14,6 +14,11 @@
       {
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            bun
+            nodejs
+            typescript
+            typescript-language-server
+
             # Go toolchain
             go_1_26
             gopls
