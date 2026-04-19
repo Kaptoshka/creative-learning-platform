@@ -1,24 +1,45 @@
-import { APITester } from "./APITester";
-import "./index.css";
+import { Routes, Route } from "react-router-dom";
+import HomePage from "@/pages/HomePage";
+import DashboardPage from "@/pages/DashboardPage";
+import TasksPage from "@/pages/TasksPage";
+import TaskPage from "@/pages/TaskPage";
+import CreateAssignmentPage from "@/pages/CreateAssignmentPage";
+import ReviewPage from "@/pages/ReviewPage";
+import SubmissionsPage from "@/pages/SubmissionsPage";
+import AuthPage from "@/pages/AuthPage";
+import TeacherDashboardPage from "@/pages/TeacherDashboardPage";
+import TaskDetailPage from "@/pages/TaskDetailPage";
+import { AuthProvider } from "@/context/AuthProvider";
+import Navigation from "@/components/Navigation";
+import ProtectedRoutes from "@/components/ProtectedRoutes";
+import "@/index.css";
 
-import logo from "./logo.svg";
-import reactLogo from "./react.svg";
-
-export function App() {
-  return (
-    <div className="app">
-      <div className="logo-container">
-        <img src={logo} alt="Bun Logo" className="logo bun-logo" />
-        <img src={reactLogo} alt="React Logo" className="logo react-logo" />
-      </div>
-
-      <h1>Bun + React</h1>
-      <p>
-        Edit <code>src/App.tsx</code> and save to test HMR
-      </p>
-      <APITester />
-    </div>
-  );
+function App() {
+    return (
+        <AuthProvider>
+            <Navigation />
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/task/:id" element={<TaskPage />} />
+                <Route path="/task-detail/:id" element={<TaskDetailPage />} />
+                <Route element={<ProtectedRoutes />}>
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route
+                        path="/create-assignment"
+                        element={<CreateAssignmentPage />}
+                    />
+                    <Route path="/review" element={<ReviewPage />} />
+                    <Route path="/submissions" element={<SubmissionsPage />} />
+                    <Route
+                        path="/teacher-dashboard"
+                        element={<TeacherDashboardPage />}
+                    />
+                </Route>
+            </Routes>
+        </AuthProvider>
+    );
 }
 
 export default App;

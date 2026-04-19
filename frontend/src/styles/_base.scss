@@ -13,17 +13,6 @@ body {
         -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
-    background-color: var(--background-color);
-}
-
-.app {
     min-height: 100vh;
-    background-color: var(--surface-color);
-}
-
-body,
-.app {
-    width: 100vw;
-    height: 100vh;
-    overflow-x: hidden;
+    background-color: var(--background-color);
 }
