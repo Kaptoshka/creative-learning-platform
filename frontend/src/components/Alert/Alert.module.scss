@@ -1,0 +1,193 @@
+@keyframes alert-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-0.5rem) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes alert-exit {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 10rem;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-0.4rem) scale(0.97);
+        max-height: 0;
+    }
+}
+
+.alert {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem 1.25rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid transparent;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    animation: alert-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: transform, opacity;
+
+    &--exiting {
+        animation: alert-exit 0.28s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+    }
+
+    &--error {
+        background-color: #fef2f2;
+        border-color: #fecaca;
+        color: #991b1b;
+
+        .alert__icon {
+            color: #dc2626;
+        }
+
+        .alert__progress-bar {
+            background-color: #dc2626;
+        }
+    }
+
+    &--success {
+        background-color: #f0fdf4;
+        border-color: #bbf7d0;
+        color: #166534;
+
+        .alert__icon {
+            color: var(--success-color);
+        }
+
+        .alert__progress-bar {
+            background-color: var(--success-color);
+        }
+    }
+
+    &--warning {
+        background-color: #fffbeb;
+        border-color: #fde68a;
+        color: #92400e;
+
+        .alert__icon {
+            color: var(--warning-color);
+        }
+
+        .alert__progress-bar {
+            background-color: var(--warning-color);
+        }
+    }
+
+    &--info {
+        background-color: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1e40af;
+
+        .alert__icon {
+            color: var(--primary-color);
+        }
+
+        .alert__progress-bar {
+            background-color: var(--primary-color);
+        }
+    }
+
+    &--hint {
+        background-color: #faf5ff;
+        border-color: #e9d5ff;
+        color: #6b21a8;
+
+        .alert__icon {
+            color: var(--purple-color);
+        }
+
+        .alert__progress-bar {
+            background-color: var(--purple-color);
+        }
+    }
+
+    &__icon {
+        flex-shrink: 0;
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: 0.1rem;
+
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    }
+
+    &__body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__title {
+        font-size: var(--font-sm);
+        font-weight: 600;
+        line-height: 1.4;
+        margin-bottom: 0.2rem;
+    }
+
+    &__message {
+        font-size: var(--font-sm);
+        line-height: 1.55;
+        opacity: 0.9;
+    }
+
+    &__close {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        padding: 0;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: var(--radius);
+        opacity: 0.55;
+        color: inherit;
+        transition:
+            opacity 0.15s ease,
+            background-color 0.15s ease;
+        margin-top: -0.05rem;
+
+        svg {
+            width: 1rem;
+            height: 1rem;
+            display: block;
+        }
+
+        &:hover {
+            opacity: 1;
+            background-color: rgb(0 0 0 / 0.06);
+        }
+
+        &:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 1px;
+        }
+    }
+
+    &__progress-track {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background-color: rgb(0 0 0 / 0.07);
+    }
+
+    &__progress-bar {
+        height: 100%;
+        border-radius: 0 2px 2px 0;
+        transition: width 0.1s linear;
+    }
+}
