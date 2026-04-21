@@ -1,6 +1,6 @@
-module api-gateway
+module github.com/Kaptoshka/creative-learning-platform/gateway
 
-go 1.25.5
+go 1.26.1
 
 require github.com/ilyakaznacheev/cleanenv v1.5.0
 

@@ -19,11 +19,12 @@ type HTTPServer struct {
 	Address     string        `yaml:"address" env-default:"127.0.0.1:8080"`
 	Timeout     time.Duration `yaml:"timeout" env-default:"5s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+	CORSOrigin  string        `yaml:"cors_origin" env-default:"http://localhost:3000"`
 }
 
 type Clients struct {
 	SSO   GRPCClient `yaml:"sso"`
-	Tasks GRPCClient `yaml:"tasks"`
+	Assignments GRPCClient `yaml:"assignments"`
 }
 
 type GRPCClient struct {
