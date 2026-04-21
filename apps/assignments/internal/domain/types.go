@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-type JSONB map[string]any
-
 type SubmissionStatus string
 
 const (
@@ -39,6 +37,22 @@ var validSubmissionStatuses = map[SubmissionStatus]struct{}{
 func ValidateSubmissionStatus(s SubmissionStatus) error {
 	if _, ok := validSubmissionStatuses[s]; !ok {
 		return fmt.Errorf("%w: %q", ErrInvalidStatusFilter, s)
+	}
+	return nil
+}
+
+var allowedTemplateFields = map[string]struct{}{
+	"title":         {},
+	"description":   {},
+	"widget_id":     {},
+	"widget_config": {},
+	"due_date":      {},
+	"updated_at":    {},
+}
+
+func ValidateTemplateField(f string) error {
+	if _, allowed := allowedTemplateFields[f]; !allowed {
+		return fmt.Errorf("forbidden field %q", f)
 	}
 	return nil
 }

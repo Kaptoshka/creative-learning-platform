@@ -1,9 +1,14 @@
 package grpc
 
 import (
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
+	"encoding/json"
+	"fmt"
 
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
 	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
+
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func convertSubmissionStatus(status domain.SubmissionStatus) tasksv1.SubmissionStatus {
@@ -38,4 +43,26 @@ func convertProtoStatus(status tasksv1.SubmissionStatus) domain.SubmissionStatus
 	default:
 		return domain.StatusNotSpecified
 	}
+}
+
+func rawMessageToStructPB(raw json.RawMessage) (*structpb.Struct, error) {
+	if len(raw) <= 0 {
+		return &structpb.Struct{}, nil
+	}
+	s := &structpb.Struct{}
+	if err := protojson.Unmarshal(raw, s); err != nil {
+		return nil, fmt.Errorf("convert to structpb: %w", err)
+	}
+	return s, nil
+}
+
+func structPBToRawMessage(s *structpb.Struct) (json.RawMessage, error) {
+	if s == nil {
+		return json.RawMessage("{}"), nil
+	}
+	b, err := protojson.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("convert to rawMessage: %w", err)
+	}
+	return b, nil
 }

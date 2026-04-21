@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
@@ -9,15 +10,15 @@ import (
 )
 
 type AssignmentTemplate struct {
-	ID           uuid.UUID    `db:"id"`
-	CreatorID    uuid.UUID    `db:"creator_id"`
-	Title        string       `db:"title"`
-	Description  string       `db:"description"`
-	WidgetID     uuid.UUID    `db:"widget_id"`
-	WidgetConfig domain.JSONB `db:"widget_config"`
-	DueDate      *time.Time   `db:"due_date"`
-	CreatedAt    time.Time    `db:"created_at"`
-	UpdatedAt    time.Time    `db:"updated_at"`
+	ID           uuid.UUID       `db:"id"`
+	CreatorID    uuid.UUID       `db:"creator_id"`
+	Title        string          `db:"title"`
+	Description  string          `db:"description"`
+	WidgetID     uuid.UUID       `db:"widget_id"`
+	WidgetConfig json.RawMessage `db:"widget_config"`
+	DueDate      *time.Time      `db:"due_date"`
+	CreatedAt    time.Time       `db:"created_at"`
+	UpdatedAt    time.Time       `db:"updated_at"`
 }
 
 type AssignmentTemplateLight struct {

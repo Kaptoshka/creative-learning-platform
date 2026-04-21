@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -61,12 +61,12 @@ type Assignments interface {
 	SaveDraft(
 		ctx context.Context,
 		studentID uuid.UUID,
-		payload domain.JSONB,
+		payload json.RawMessage,
 	) (uuid.UUID, error)
 	Submit(
 		ctx context.Context,
 		studentID uuid.UUID,
-		payload domain.JSONB,
+		payload json.RawMessage,
 	) (uuid.UUID, domain.SubmissionStatus, error)
 }
 
@@ -145,7 +145,10 @@ func (s *serverAPI) CreateAssignment(
 		return nil, status.Error(codes.InvalidArgument, "parsing widget ID error")
 	}
 
-	widgetConfig := domain.JSONB(req.WidgetConfig.AsMap())
+	widgetConfig, err := structPBToRawMessage(req.GetWidgetConfig())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "parsing widget config error")
+	}
 
 	dueTime := req.DueDate.AsTime()
 
@@ -223,7 +226,7 @@ func (s *serverAPI) UpdateAssignment(
 		return nil, status.Error(codes.Internal, "cannot update assignment")
 	}
 
-	widgetConfig, err := structpb.NewStruct(updateModel.WidgetConfig)
+	widgetConfig, err := rawMessageToStructPB(updateModel.WidgetConfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -324,7 +327,7 @@ func (s *serverAPI) GetAssignment(
 		return nil, status.Error(codes.Internal, "failed to retrieve assignment")
 	}
 
-	widgetConfig, err := structpb.NewStruct(assignment.WidgetConfig)
+	widgetConfig, err := rawMessageToStructPB(assignment.WidgetConfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to convert widget config")
 	}
@@ -436,7 +439,7 @@ func (s *serverAPI) ListAssignmentSubmissions(
 
 	submissionsProto := make([]*tasksv1.Submission, 0, len(submissions))
 	for _, item := range submissions {
-		payload, err := structpb.NewStruct(item.SubmissionVersion.Payload)
+		payload, err := rawMessageToStructPB(item.SubmissionVersion.Payload)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to parse submission payload")
 		}
@@ -486,7 +489,7 @@ func (s *serverAPI) GetStudentSubmission(
 		return nil, status.Error(codes.Internal, "failed to retrieve data")
 	}
 
-	widgetConfig, err := structpb.NewStruct(assignment.WidgetConfig)
+	widgetConfig, err := rawMessageToStructPB(assignment.WidgetConfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to parse widget config")
 	}
@@ -519,7 +522,7 @@ func (s *serverAPI) GetStudentSubmission(
 
 	versionsHistory := make([]*tasksv1.SubmissionVersion, 0, len(submissionVersions))
 	for _, version := range submissionVersions {
-		versionPayload, err := structpb.NewStruct(version.Payload)
+		versionPayload, err := rawMessageToStructPB(version.Payload)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to parse version payload")
 		}
@@ -536,7 +539,7 @@ func (s *serverAPI) GetStudentSubmission(
 
 	feedbackHistory := make([]*tasksv1.Feedback, 0, len(feedbacks))
 	for _, feedback := range feedbacks {
-		feedbackPayload, err := structpb.NewStruct(feedback.Payload)
+		feedbackPayload, err := rawMessageToStructPB(feedback.Payload)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to parse feedback payload")
 		}
@@ -589,11 +592,9 @@ func (s *serverAPI) ProvideFeedback(
 		return nil, status.Error(codes.InvalidArgument, "invalid submission version ID")
 	}
 
-	var feedbackPayload domain.JSONB
-	if req.GetPayload() != nil {
-		feedbackPayload = domain.JSONB(req.GetPayload().AsMap())
-	} else {
-		feedbackPayload = make(domain.JSONB)
+	feedbackPayload, err := structPBToRawMessage(req.GetPayload())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid payload: %v", err)
 	}
 
 	dto := &dto.Feedback{
@@ -727,11 +728,9 @@ func (s *serverAPI) SaveAssignmentDraft(
 		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
 	}
 
-	var submissionPayload domain.JSONB
-	if req.GetPayload() != nil {
-		submissionPayload = domain.JSONB(req.GetPayload().AsMap())
-	} else {
-		submissionPayload = make(domain.JSONB)
+	submissionPayload, err := structPBToRawMessage(req.GetPayload())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid payload: %v", err)
 	}
 
 	submissionVersionID, err := s.assignments.SaveDraft(
@@ -763,11 +762,9 @@ func (s *serverAPI) SubmitAssignment(
 		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
 	}
 
-	var submissionPayload domain.JSONB
-	if req.GetPayload() != nil {
-		submissionPayload = domain.JSONB(req.GetPayload().AsMap())
-	} else {
-		submissionPayload = make(domain.JSONB)
+	submissionPayload, err := structPBToRawMessage(req.GetPayload())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid payload: %v", err)
 	}
 
 	submissionID, submissionStatus, err := s.assignments.Submit(

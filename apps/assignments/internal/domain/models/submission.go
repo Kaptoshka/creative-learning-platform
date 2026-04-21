@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
@@ -18,14 +19,14 @@ type Submission struct {
 }
 
 type SubmissionVersion struct {
-	ID               uuid.UUID     `db:"id"`
-	SubmissionID     uuid.UUID     `db:"submission_id"`
-	VersionNumber    int32         `db:"version_number"`
-	Payload          domain.JSONB  `db:"payload"`
-	TimeSpentSeconds time.Duration `db:"time_spent_seconds"`
-	IsAutosave       bool          `db:"is_autosave"`
-	CreatedAt        time.Time     `db:"created_at"`
-	UpdatedAt        time.Time     `db:"updated_at"`
+	ID               uuid.UUID       `db:"id"`
+	SubmissionID     uuid.UUID       `db:"submission_id"`
+	VersionNumber    int32           `db:"version_number"`
+	Payload          json.RawMessage `db:"payload"`
+	TimeSpentSeconds time.Duration   `db:"time_spent_seconds"`
+	IsAutosave       bool            `db:"is_autosave"`
+	CreatedAt        time.Time       `db:"created_at"`
+	UpdatedAt        time.Time       `db:"updated_at"`
 }
 
 type SubmissionItem struct {

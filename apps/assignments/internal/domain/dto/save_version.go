@@ -1,15 +1,14 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
-
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
 
 	"github.com/google/uuid"
 )
 
 type SaveVersion struct {
 	SubmissionID uuid.UUID
-	Payload      domain.JSONB
+	Payload      json.RawMessage
 	TimeSpent    time.Duration
 }

@@ -4,9 +4,9 @@ import (
 	"log/slog"
 
 	grpcapp "github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/app/grpc"
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/services/assignment"
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/services/submission"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/service/assignment"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres/submission"
 )
 
 type App struct {
