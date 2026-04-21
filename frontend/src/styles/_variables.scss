@@ -1,4 +1,6 @@
 :root {
+    --navbar-height: 4rem;
+
     --primary-color: #2563eb;
     --primary-dark: #1d4ed8;
     --secondary-color: #64748b;
@@ -20,33 +22,26 @@
     --radius: 0.5rem;
     --radius-lg: 0.75rem;
 
-    /* --- Жидкая типографика (Fluid Typography) --- */
+    /* --- Fluid Typography --- */
 
-    /* XS: Мелкие подписи, мета-данные (12px -> 13px) */
-    /* Было: 0.75rem, 12px */
+    /* XS: Small signatures, meta-data (12px -> 13px) */
     --font-xs: clamp(0.75rem, 0.74rem + 0.05vw, 0.81rem);
 
-    /* SM: Обычный мелкий текст (14px -> 15px) */
-    /* Было: 0.875rem, 0.9rem, 14px */
+    /* SM: Small text (14px -> 15px) */
     --font-sm: clamp(0.875rem, 0.85rem + 0.11vw, 0.94rem);
 
-    /* BASE: Основной текст (16px -> 18px) */
-    /* Было: 1rem, 16px */
+    /* BASE: Base text (16px -> 18px) */
     --font-base: clamp(1rem, 0.96rem + 0.22vw, 1.13rem);
 
-    /* LG: Акцентный текст, подзаголовки (18px -> 22px) */
-    /* Было: 1.125rem, 1.25rem, 1.3rem */
+    /* LG: Accent text, subheadings (18px -> 22px) */
     --font-lg: clamp(1.125rem, 1.05rem + 0.38vw, 1.35rem);
 
-    /* XL: Заголовки карточек, H3 (24px -> 28px) */
-    /* Было: 1.5rem */
+    /* XL: Headers, H3 (24px -> 28px) */
     --font-xl: clamp(1.5rem, 1.41rem + 0.43vw, 1.75rem);
 
-    /* 2XL: Крупные заголовки H2 (28px -> 36px) */
-    /* Было: 1.75rem, 1.875rem, 2rem */
+    /* 2XL: Large headers H2 (28px -> 36px) */
     --font-2xl: clamp(1.75rem, 1.56rem + 0.98vw, 2.25rem);
 
-    /* 3XL: Hero заголовки H1 (40px -> 60px) */
-    /* Было: 2.5rem, 3.75rem */
+    /* 3XL: Hero headers H1 (40px -> 60px) */
     --font-3xl: clamp(2.5rem, 1.74rem + 3.8vw, 3.75rem);
 }

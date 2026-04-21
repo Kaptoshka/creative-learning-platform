@@ -106,183 +106,224 @@ const AuthPage = () => {
     };
 
     const isLoginMode = mode === "login";
-    const title = isLoginMode ? "Логин" : "Создать аккаунт";
-    const buttonText = isLoginMode ? "Логин" : "Регистрация";
-    const switchButtonText = isLoginMode
-        ? "Нет аккаунта? Зарегистрируйтесь"
-        : "Уже есть аккаунт? Войдите";
 
     return (
         <div className={styles.authPage}>
-            <form onSubmit={handleSubmit} noValidate>
-                <div className={styles.authForm}>
-                    <div className={styles.authPageHeader}>
-                        <BookOpen className={styles.authPageLogo} />
-                        <h2 className={styles.authPageTitle}>{title}</h2>
-                        <p className={styles.authPageSubtitle}>
+            {/* Left decorative panel */}
+            <div className={styles.authPanel}>
+                <div className={styles.authPanelContent}>
+                    <div className={styles.authPanelLogo}>
+                        <svg
+                            width="32"
+                            height="32"
+                            viewBox="0 0 32 32"
+                            fill="none"
+                        >
+                            <rect
+                                width="14"
+                                height="14"
+                                rx="3"
+                                fill="white"
+                                fillOpacity="0.9"
+                            />
+                            <rect
+                                x="18"
+                                width="14"
+                                height="14"
+                                rx="3"
+                                fill="white"
+                                fillOpacity="0.6"
+                            />
+                            <rect
+                                y="18"
+                                width="14"
+                                height="14"
+                                rx="3"
+                                fill="white"
+                                fillOpacity="0.6"
+                            />
+                            <rect
+                                x="18"
+                                y="18"
+                                width="14"
+                                height="14"
+                                rx="3"
+                                fill="white"
+                                fillOpacity="0.9"
+                            />
+                        </svg>
+                    </div>
+                    <div className={styles.authPanelText}>
+                        <h1>
+                            Образование,
+                            <br />
+                            которое работает
+                        </h1>
+                        <p>
+                            Управляйте заданиями, отслеживайте прогресс и
+                            получайте обратную связь в одном месте.
+                        </p>
+                    </div>
+                    <div className={styles.authPanelDecor}>
+                        <div className={styles.decor1} />
+                        <div className={styles.decor2} />
+                        <div className={styles.decor3} />
+                        <div className={styles.decor4} />
+                        <div className={styles.decor5} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Right form panel */}
+            <div className={styles.authFormPanel}>
+                <div className={styles.authFormWrapper}>
+                    <div className={styles.authFormHeader}>
+                        <h2>
+                            {isLoginMode
+                                ? "Войти в аккаунт"
+                                : "Создать аккаунт"}
+                        </h2>
+                        <p>
                             {isLoginMode
                                 ? "Добро пожаловать обратно!"
                                 : "Присоединяйтесь к нам!"}
                         </p>
                     </div>
-                    {error && <p className="error-message">{error}</p>}
-                    <div className={styles.authPageFormContainer}>
-                        <div className={styles.authFormContent}>
-                            <div className={styles.authFormColumns}>
-                                {!isLoginMode && (
-                                    <div className={styles.authFormColumn}>
-                                        <div className="form-group">
-                                            <label
-                                                htmlFor="name"
-                                                className="form-group__label"
-                                            >
-                                                Имя
-                                            </label>
-                                            <input
-                                                id="name"
-                                                type="text"
-                                                className="form-group__input"
-                                                placeholder="Введите имя"
-                                                value={firstName}
-                                                onChange={(e) =>
-                                                    setFirstName(e.target.value)
-                                                }
-                                                required
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label
-                                                htmlFor="name"
-                                                className="form-group__label"
-                                            >
-                                                Фамилия
-                                            </label>
-                                            <input
-                                                id="name"
-                                                type="text"
-                                                className="form-group__input"
-                                                placeholder="Введите фамилию"
-                                                value={lastName}
-                                                onChange={(e) =>
-                                                    setLastName(e.target.value)
-                                                }
-                                                required
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label
-                                                htmlFor="name"
-                                                className="form-group__label"
-                                            >
-                                                Отчество
-                                            </label>
-                                            <input
-                                                id="middleName"
-                                                type="text"
-                                                className="form-group__input"
-                                                placeholder="Введите отчество"
-                                                value={middleName}
-                                                onChange={(e) =>
-                                                    setMiddleName(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                required
-                                                disabled={isLoading}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                                <div className={styles.authFormColumn}>
-                                    <div className="form-group">
-                                        <label
-                                            htmlFor="email"
-                                            className="form-group__label"
-                                        >
-                                            Email
-                                        </label>
-                                        <input
-                                            id="email"
-                                            type="email"
-                                            className="form-group__input"
-                                            placeholder="Введите email"
-                                            value={email}
-                                            onChange={(e) =>
-                                                setEmail(e.target.value)
-                                            }
-                                            required
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label
-                                            htmlFor="password"
-                                            className="form-group__label"
-                                        >
-                                            Пароль
-                                        </label>
-                                        <input
-                                            id="password"
-                                            type="password"
-                                            className="form-group__input"
-                                            placeholder="Введите пароль"
-                                            value={password}
-                                            onChange={(e) =>
-                                                setPassword(e.target.value)
-                                            }
-                                            required
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                    {!isLoginMode && (
-                                        <div className="form-group">
-                                            <label
-                                                htmlFor="confirmPassword"
-                                                className="form-group__label"
-                                            >
-                                                Подтвердите пароль
-                                            </label>
-                                            <input
-                                                id="confirmPassword"
-                                                type="password"
-                                                className="form-group__input"
-                                                placeholder="Подтвердите пароль"
-                                                value={confirmPassword}
-                                                onChange={(e) =>
-                                                    setConfirmPassword(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                required
-                                                disabled={isLoading}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
 
-                            <Button
-                                type="submit"
-                                variant="primary"
-                                fullWidth
+                    {error && <div className={styles.authError}>{error}</div>}
+
+                    <form
+                        onSubmit={handleSubmit}
+                        noValidate
+                        className={styles.authForm}
+                    >
+                        {!isLoginMode && (
+                            <>
+                                <div className={styles.authFieldRow}>
+                                    {/*
+                                     * ВАЖНО: input идёт ДО label.
+                                     * Floating label работает через CSS-селектор input:focus ~ label
+                                     * и input:not(:placeholder-shown) ~ label
+                                     */}
+                                    <div className={styles.authField}>
+                                        <input
+                                            id="firstName"
+                                            type="text"
+                                            placeholder=" "
+                                            value={firstName}
+                                            onChange={(e) =>
+                                                setFirstName(e.target.value)
+                                            }
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                        <label htmlFor="firstName">Имя</label>
+                                    </div>
+                                    <div className={styles.authField}>
+                                        <input
+                                            id="lastName"
+                                            type="text"
+                                            placeholder=" "
+                                            value={lastName}
+                                            onChange={(e) =>
+                                                setLastName(e.target.value)
+                                            }
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                        <label htmlFor="lastName">
+                                            Фамилия
+                                        </label>
+                                    </div>
+                                </div>
+                                <div className={styles.authField}>
+                                    <input
+                                        id="middleName"
+                                        type="text"
+                                        placeholder=" "
+                                        value={middleName}
+                                        onChange={(e) =>
+                                            setMiddleName(e.target.value)
+                                        }
+                                        disabled={isLoading}
+                                    />
+                                    <label htmlFor="middleName">Отчество</label>
+                                </div>
+                            </>
+                        )}
+
+                        <div className={styles.authField}>
+                            <input
+                                id="email"
+                                type="email"
+                                placeholder=" "
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
                                 disabled={isLoading}
-                            >
-                                {isLoading ? "Загрузка..." : buttonText}
-                            </Button>
-                            <div className={styles.authFormFooter}>
-                                <Button
-                                    type="button"
-                                    className={styles.authFormSwitch}
-                                    onClick={handleModeSwitch}
-                                    disabled={isLoading}
-                                >
-                                    {switchButtonText}
-                                </Button>
-                            </div>
+                            />
+                            <label htmlFor="email">Email</label>
                         </div>
+
+                        <div className={styles.authField}>
+                            <input
+                                id="password"
+                                type="password"
+                                placeholder=" "
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                disabled={isLoading}
+                            />
+                            <label htmlFor="password">Пароль</label>
+                        </div>
+
+                        {!isLoginMode && (
+                            <div className={styles.authField}>
+                                <input
+                                    id="confirmPassword"
+                                    type="password"
+                                    placeholder=" "
+                                    value={confirmPassword}
+                                    onChange={(e) =>
+                                        setConfirmPassword(e.target.value)
+                                    }
+                                    required
+                                    disabled={isLoading}
+                                />
+                                <label htmlFor="confirmPassword">
+                                    Подтвердите пароль
+                                </label>
+                            </div>
+                        )}
+
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            fullWidth
+                            disabled={isLoading}
+                            className={styles.authSubmit}
+                        >
+                            {isLoading
+                                ? "Загрузка..."
+                                : isLoginMode
+                                  ? "Войти"
+                                  : "Зарегистрироваться"}
+                        </Button>
+                    </form>
+
+                    <div className={styles.authSwitch}>
+                        <span>
+                            {isLoginMode
+                                ? "Нет аккаунта? "
+                                : "Уже есть аккаунт? "}
+                        </span>
+                        <button onClick={handleModeSwitch} disabled={isLoading}>
+                            {isLoginMode ? "Зарегистрируйтесь" : "Войдите"}
+                        </button>
                     </div>
                 </div>
-            </form>
+            </div>
         </div>
     );
 };
