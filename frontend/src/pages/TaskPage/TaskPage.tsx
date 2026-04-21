@@ -1,7 +1,8 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTaskPage } from "@/hooks/useTaskPage";
-import offlineQueue from "@/services/offlineQueue";
+import { useAlert } from "@/context/AlertContext";
+import Loader from "@/components/Loader";
 
 import AbbreviationTask from "@/components/AssignmentTypes/AbbreviationTask";
 import AlliterationTask from "@/components/AssignmentTypes/AlliterationTask";
@@ -12,13 +13,12 @@ import UseCaseTask from "@/components/AssignmentTypes/UseCaseTask";
 import ThirtyCirclesTask from "@/components/AssignmentTypes/ThirtyCirclesTask";
 
 import Button from "@/components/Button";
-import Loading from "@/components/ui/Loading";
-import ErrorMessage from "@/components/ui/ErrorMessage";
 
 import styles from "./TaskPage.module.scss";
 
 const TaskPage = () => {
     const navigate = useNavigate();
+    const alert = useAlert();
     const {
         task,
         loading,
@@ -31,6 +31,21 @@ const TaskPage = () => {
         handleSubmit,
         isFormValid,
     } = useTaskPage();
+
+    useEffect(() => {
+        if (error) {
+            alert.error(
+                error?.message ?? "Не удалось загрузить задание.",
+                "Ошибка",
+            );
+        }
+    }, [error]);
+
+    useEffect(() => {
+        if (submitSuccess && successMessage) {
+            alert.success(successMessage);
+        }
+    }, [submitSuccess]);
 
     const handleContentChange = useCallback(
         (content: unknown) => {
@@ -73,27 +88,15 @@ const TaskPage = () => {
 
     if (loading) {
         return (
-            <div className={`${styles.pageContainer} loading`}>
-                <Loading text="Загрузка задания..." fullPage />
+            <div className={styles.pageContainer}>
+                <Loader fullPage variant="bar" label="Загрузка задания…" />
             </div>
         );
     }
 
-    if (error && !task) {
+    if (error || !task) {
         return (
-            <div className={`${styles.pageContainer}`}>
-                <ErrorMessage error={error} />
-                <Button variant="outline" onClick={() => navigate("/tasks")}>
-                    Вернуться к заданиям
-                </Button>
-            </div>
-        );
-    }
-
-    if (!task) {
-        return (
-            <div className={`${styles.pageContainer}`}>
-                <ErrorMessage error="Задание не найдено" />
+            <div className={styles.pageContainer}>
                 <Button variant="outline" onClick={() => navigate("/tasks")}>
                     Вернуться к заданиям
                 </Button>
@@ -112,20 +115,10 @@ const TaskPage = () => {
                 className={styles.form}
                 onSubmit={(e) => {
                     e.preventDefault();
-                    if (isFormValid()) {
-                        handleSubmit(e);
-                    }
+                    if (isFormValid()) handleSubmit(e);
                 }}
             >
                 {renderTaskByType()}
-
-                {submitSuccess && (
-                    <div className={styles.successMessage}>
-                        {successMessage}
-                    </div>
-                )}
-
-                {error && !submitSuccess && <ErrorMessage error={error} />}
 
                 <div className={styles.formActions}>
                     <Button
@@ -133,7 +126,11 @@ const TaskPage = () => {
                         variant="primary"
                         disabled={!isFormValid() || isSubmitting}
                     >
-                        {isSubmitting ? "Отправка..." : "Отправить задание"}
+                        {isSubmitting ? (
+                            <Loader size="sm" variant="dots" />
+                        ) : (
+                            "Отправить задание"
+                        )}
                     </Button>
                     <Button
                         variant="outline"

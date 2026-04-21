@@ -2,9 +2,9 @@ import React, { useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
+import Loader from "@/components/Loader";
 import TasksPage from "@/pages/TasksPage";
 import Button from "@/components/Button";
-import Loading from "@/components/ui/Loading";
 import Greeting from "@/components/ui/Greeting";
 import QuickStats from "@/components/ui/QuickStats";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -32,7 +32,11 @@ const DashboardPage = () => {
         return (
             <div className={styles.dashboard}>
                 <div className={styles.dashboardContainer}>
-                    <Loading text="Загрузка личного кабинета..." fullPage />
+                    <Loader
+                        fullPage
+                        variant="bar"
+                        label="Загрузка личного кабинета…"
+                    />
                 </div>
             </div>
         );

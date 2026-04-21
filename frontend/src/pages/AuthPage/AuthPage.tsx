@@ -2,6 +2,8 @@ import React, { useState, useContext } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "@/context/AuthContext";
+import { useAlert } from "@/context/AlertContext";
+import Loader from "@/components/Loader";
 import { BookOpen } from "lucide-react";
 import axios from "axios";
 import Button from "@/components/Button";
@@ -19,19 +21,19 @@ const AuthPage = () => {
     const [lastName, setLastName] = useState("");
     const [middleName, setMiddleName] = useState("");
 
-    const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
+    const alert = useAlert();
 
     const handleModeSwitch = () => {
+        setIsLoading(false);
         setEmail("");
         setPassword("");
         setConfirmPassword("");
         setFirstName("");
         setLastName("");
         setMiddleName("");
-        setError("");
 
         const toggleMode = () => {
             setMode((prev) => (prev === "login" ? "register" : "login"));
@@ -52,10 +54,15 @@ const AuthPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-        setError("");
 
-        if (mode == "register" && password !== confirmPassword) {
-            setError("Пароли не совпадают.");
+        if (mode === "register" && (!firstName.trim() || !lastName.trim())) {
+            alert.error("Введите имя и фамилию.");
+            setIsLoading(false);
+            return;
+        }
+
+        if (mode === "register" && password !== confirmPassword) {
+            alert.error("Пароли не совпадают.");
             setIsLoading(false);
             return;
         }
@@ -64,19 +71,21 @@ const AuthPage = () => {
             let response;
             if (mode === "login") {
                 response = await axios.post(`${config.ssoAPIURL}/auth/login`, {
-                    email: email,
-                    password: password,
+                    email: email.trim(),
+                    password: password.trim(),
                     app_id: +config.appId,
                 });
             } else {
                 response = await axios.post(
                     `${config.ssoAPIURL}/auth/register`,
                     {
-                        email: email,
-                        password: password,
-                        first_name: firstName,
-                        last_name: lastName,
-                        middle_name: middleName,
+                        email: email.trim(),
+                        password: password.trim(),
+                        first_name: firstName.trim(),
+                        last_name: lastName.trim(),
+                        ...(middleName.trim() && {
+                            middle_name: middleName.trim(),
+                        }),
                     },
                 );
             }
@@ -84,19 +93,29 @@ const AuthPage = () => {
             if (response.data) {
                 if (response.data.token) {
                     login(response.data.token);
+                    navigate("/tasks", { viewTransition: true });
                 } else if (response.data.user_id) {
+                    alert.success("Аккаунт создан. Войдите в систему.");
                     navigate("/auth", { viewTransition: true });
+                } else {
+                    alert.error(
+                        "Не удалось получить токен от сервера.",
+                        "Ошибка входа",
+                    );
                 }
-                navigate("/tasks", { viewTransition: true });
             } else {
-                setError("login failed: no token was received from the server");
+                alert.error(
+                    "Не удалось получить токен от сервера.",
+                    "Ошибка входа",
+                );
             }
         } catch (err) {
             if (err.response && err.response.data && err.response.data.error) {
-                setError(err.response.data.error);
+                alert.error(err.response.data.error, "Ошибка");
             } else {
-                setError(
-                    "login failed: please check your credentials or network connection",
+                alert.error(
+                    "Проверьте данные или подключение к сети.",
+                    "Ошибка входа",
                 );
             }
             console.error("login failed: ", err);
@@ -189,8 +208,6 @@ const AuthPage = () => {
                                 : "Присоединяйтесь к нам!"}
                         </p>
                     </div>
-
-                    {error && <div className={styles.authError}>{error}</div>}
 
                     <form
                         onSubmit={handleSubmit}
@@ -303,12 +320,32 @@ const AuthPage = () => {
                             fullWidth
                             disabled={isLoading}
                             className={styles.authSubmit}
+                            style={{
+                                position: "relative",
+                            }}
                         >
-                            {isLoading
-                                ? "Загрузка..."
-                                : isLoginMode
-                                  ? "Войти"
-                                  : "Зарегистрироваться"}
+                            {isLoading && (
+                                <span
+                                    style={{
+                                        position: "absolute",
+                                        inset: 0,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                    }}
+                                >
+                                    <Loader size="sm" variant="dots" inline />
+                                </span>
+                            )}
+                            <span
+                                style={{
+                                    visibility: isLoading
+                                        ? "hidden"
+                                        : "visible",
+                                }}
+                            >
+                                {isLoginMode ? "Войти" : "Зарегистрироваться"}
+                            </span>
                         </Button>
                     </form>
 

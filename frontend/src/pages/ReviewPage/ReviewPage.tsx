@@ -1,7 +1,3 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useReview } from "@/hooks/useReview";
-
 import AbbreviationTask from "@/components/AssignmentTypes/AbbreviationTask";
 import AlliterationTask from "@/components/AssignmentTypes/AlliterationTask";
 import CombineTask from "@/components/AssignmentTypes/CombineTask";
@@ -10,14 +6,15 @@ import UnexpectedConnectionsTask from "@/components/AssignmentTypes/UnexpectedCo
 import UseCaseTask from "@/components/AssignmentTypes/UseCaseTask";
 
 import Button from "@/components/Button";
-import Loading from "@/components/ui/Loading";
-import ErrorMessage from "@/components/ui/ErrorMessage";
+import Loader from "@/components/Loader";
+import { useAlert } from "@/context/AlertContext";
 import ReviewForm from "@/components/ui/ReviewForm";
 
 import styles from "./ReviewPage.module.scss";
 
 const ReviewPage = () => {
     const navigate = useNavigate();
+    const alert = useAlert();
     const {
         submission,
         task,
@@ -29,6 +26,21 @@ const ReviewPage = () => {
         setReviewField,
         submitReview,
     } = useReview();
+
+    useEffect(() => {
+        if (error) {
+            alert.error(
+                error?.message ?? "Не удалось загрузить ответ.",
+                "Ошибка загрузки",
+            );
+        }
+    }, [error]);
+
+    useEffect(() => {
+        if (showSuccess) {
+            alert.success("Обратная связь успешно отправлена!");
+        }
+    }, [showSuccess]);
 
     const renderTaskByType = () => {
         if (!task || !submission?.content) return null;
@@ -60,13 +72,12 @@ const ReviewPage = () => {
     };
 
     if (loading) {
-        return <Loading text="Загрузка ответа..." fullPage />;
+        return <Loader fullPage variant="bar" label="Загрузка ответа…" />;
     }
 
     if (error && !submission) {
         return (
             <div className={styles.feedbackPage}>
-                <ErrorMessage error={error} />
                 <Button
                     variant="outline"
                     onClick={() => navigate("/submissions")}
@@ -80,7 +91,6 @@ const ReviewPage = () => {
     if (!submission || !task) {
         return (
             <div className={styles.feedbackPage}>
-                <ErrorMessage error="Ответ не найден" />
                 <Button
                     variant="outline"
                     onClick={() => navigate("/submissions")}
@@ -117,21 +127,17 @@ const ReviewPage = () => {
                     />
                 </div>
 
-                {showSuccess && (
-                    <div className={styles.successMessage}>
-                        ✓ Обратная связь успешно отправлена!
-                    </div>
-                )}
-
                 <div className={styles.feedbackFormActions}>
                     <Button
                         variant="primary"
                         onClick={submitReview}
                         disabled={submitting}
                     >
-                        {submitting
-                            ? "Отправка..."
-                            : "Отправить обратную связь"}
+                        {submitting ? (
+                            <Loader size="sm" variant="dots" inline />
+                        ) : (
+                            "Отправить обратную связь"
+                        )}
                     </Button>
                     <Button
                         variant="outline"

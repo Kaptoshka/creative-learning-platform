@@ -1,35 +1,58 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTask } from "@/hooks/useTask";
+import { useAlert } from "@/context/AlertContext";
+import Loader from "@/components/Loader";
 import Button from "@/components/Button";
-import Loading from "@/components/ui/Loading";
-import ErrorMessage from "@/components/ui/ErrorMessage";
 import PageContainer from "@/components/ui/PageContainer";
 
 const TaskDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const alert = useAlert();
 
     const [submissionContent, setSubmissionContent] = useState("");
     const { task, loading, error, submit } = useTask({ taskId: id });
 
+    useEffect(() => {
+        if (error) {
+            alert.error(
+                error?.message ?? "Не удалось загрузить задание.",
+                "Ошибка",
+            );
+        }
+    }, [error]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (!submissionContent.trim()) {
+            alert.warning("Заполните поле перед отправкой.");
+            return;
+        }
+
         const success = await submit(submissionContent);
         if (success) {
+            alert.success("Задание успешно отправлено!");
             navigate("/tasks", { viewTransition: true });
+        } else {
+            alert.error(
+                "Не удалось отправить задание. Попробуйте снова.",
+                "Ошибка отправки",
+            );
         }
     };
 
     if (loading) {
-        return <Loading text="Загрузка задания..." fullPage />;
+        return <Loader fullPage variant="bar" label="Загрузка задания…" />;
     }
 
     if (error || !task) {
         return (
             <PageContainer>
-                <ErrorMessage error={error || "Задание не найдено."} />
+                <Button variant="outline" onClick={() => navigate("/tasks")}>
+                    Вернуться к заданиям
+                </Button>
             </PageContainer>
         );
     }
@@ -42,9 +65,8 @@ const TaskDetailPage = () => {
             </header>
 
             <div className="submission-form-container">
-                <h3>Your Submission</h3>
+                <h3>Твои задания</h3>
                 <form onSubmit={handleSubmit} noValidate>
-                    {error && <ErrorMessage error={error} />}
                     <div className="form-group">
                         <label htmlFor="submissionContent">
                             Enter your work below:
@@ -55,13 +77,13 @@ const TaskDetailPage = () => {
                             onChange={(e) =>
                                 setSubmissionContent(e.target.value)
                             }
-                            rows="10"
+                            rows={10}
                             placeholder="Start writing your creative response here..."
                             required
                         />
                     </div>
                     <Button type="submit" variant="primary">
-                        Submit Task
+                        Отправь работу
                     </Button>
                 </form>
             </div>

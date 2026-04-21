@@ -1,183 +1,484 @@
-import React from "react";
+import React, { useState, useContext } from "react";
+import offlineQueue from "@/services/offlineQueue";
+import apiClient from "@/services/apiClient";
+import { AuthContext } from "@/context/AuthContext";
+import Button from "@/components/Button";
 import { useNavigate } from "react-router-dom";
+import { creativeTemplates } from "@/data/templates";
+import "react-datepicker/dist/react-datepicker.css";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { ru } from "date-fns/locale/ru";
 
-import { useCreateAssignment } from "@/hooks/useCreateAssignment";
-import Button from "@/components/Button";
-import Loading from "@/components/ui/Loading";
-import ErrorMessage from "@/components/ui/ErrorMessage";
-
 import styles from "./CreateAssignmentPage.module.scss";
 
-registerLocale("ru", ru);
-
 const CreateAssignmentPage = () => {
-  const navigate = useNavigate();
-  const {
-    title,
-    description,
-    deadline,
-    selectedTemplate,
-    selectedStudent,
-    studentQuery,
-    searchResults,
-    showStudentSearch,
-    error,
-    success,
-    isLoading,
-    templates,
-    setTitle,
-    setDescription,
-    setDeadline,
-    setSelectedTemplate,
-    setStudentQuery,
-    setSelectedStudent,
-    setShowStudentSearch,
-    searchStudents,
-    createAssignment,
-  } = useCreateAssignment();
+    registerLocale("ru", ru);
 
-  const handleSearchChange = (value: string) => {
-    setStudentQuery(value);
-    if (value.length >= 2) {
-      searchStudents(value);
-      setShowStudentSearch(true);
-    } else {
-      setShowStudentSearch(false);
-    }
-  };
+    const { user } = useContext(AuthContext);
+    const [studentQuery, setStudentQuery] = useState("");
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [deadline, setDeadline] = useState(null);
+    const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  const selectStudent = (student: { id: number; first_name: string; last_name: string; email: string }) => {
-    setSelectedStudent(student);
-    setShowStudentSearch(false);
-    setStudentQuery(`${student.first_name} ${student.last_name}`);
-  };
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [showStudentSearch, setShowStudentSearch] = useState(false);
+    const [searchResults, setSearchResults] = useState([]);
 
-  if (isLoading) {
-    return <Loading text="Создание..." fullPage />;
-  }
+    const navigate = useNavigate();
 
-  return (
-    <div className={styles.createTaskPage}>
-      <div className={styles.createTaskPageContainer}>
-        <h1>Создать новое задание</h1>
+    const handleStudentSearch = async (query) => {
+        setStudentQuery(query);
+        setError("");
 
-        {error && <ErrorMessage error={error} />}
-        {success && <div className={styles.successMessage}>{success}</div>}
+        if (query.length < 2) {
+            setShowStudentSearch(false);
+            setSearchResults([]);
+            return;
+        }
 
-        <form
-          className={styles.createTaskPageForm}
-          onSubmit={(e) => {
-            e.preventDefault();
-            createAssignment();
-          }}
-        >
-          {/* Student Selection */}
-          <div className={styles.taskFormSection}>
-            <h3>Назначить студенту (опционально)</h3>
-            <div className={styles.formGroup}>
-              <input
-                type="text"
-                placeholder="Введите имя или email студента..."
-                value={studentQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className={styles.formInput}
-              />
-              {showStudentSearch && searchResults.length > 0 && (
-                <div className={styles.searchResults}>
-                  {searchResults.slice(0, 5).map((student) => (
-                    <div
-                      key={student.id}
-                      className={styles.searchResultItem}
-                      onClick={() => selectStudent(student)}
-                    >
-                      {student.first_name} {student.last_name} - {student.email}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {selectedStudent && (
-                <button
-                  type="button"
-                  className={styles.clearButton}
-                  onClick={() => {
-                    setSelectedStudent(null);
+        if (!navigator.onLine) {
+            return;
+        }
+
+        try {
+            const response = await apiClient.get(
+                `/users/search?role=student&query=${query}`,
+            );
+            setSearchResults(response.data);
+            setShowStudentSearch(true);
+        } catch (err) {
+            console.error("failed to search students", err);
+            if (!navigator.onLine || err.message === "Network Error") {
+                setError("Нет интернета. Поиск студентов недоступен.");
+            } else {
+                setError("Не удалось загрузить список студентов.");
+            }
+            setSearchResults([]);
+        }
+    };
+
+    const selectStudent = (student) => {
+        setSelectedStudent(student);
+        setStudentQuery(
+            `${student.last_name} ${student.first_name} (${student.email})`,
+        );
+        setShowStudentSearch(false);
+    };
+
+    const selectTemplate = (template) => {
+        setSelectedTemplate(template);
+        if (!title) setTitle(template.name);
+        if (!description) setDescription(template.description);
+    };
+
+    const handleSubmit = async () => {
+        setIsLoading(true);
+        setError("");
+        setSuccess("");
+
+        if (!selectedStudent || !title || !deadline || !selectedTemplate) {
+            setError("Пожалуйста, заполните все обязательные поля");
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            console.log("deadline", deadline);
+            const payload = {
+                teacher_id: user.id,
+                student_id: selectedStudent.id,
+                deadline: deadline ? deadline.toISOString() : null,
+                status: "available",
+                content: JSON.stringify({
+                    title: title.trim(),
+                    description: description.trim(),
+                    type: selectedTemplate.name,
+                    prompt: selectedTemplate.content,
+                    instructions: selectedTemplate.instructions,
+                    example: selectedTemplate.example,
+                }),
+            };
+
+            const response = await offlineQueue.send("/assignments", payload);
+
+            if (response.status === 201 || response.status === "offline") {
+                const message =
+                    response.status === "offline"
+                        ? "Интернета нет. Задание сохранено и будет отправлено автоматически при появлении сети."
+                        : "Задание успешно создано!";
+
+                setSuccess(message);
+
+                setTimeout(() => {
                     setStudentQuery("");
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          </div>
+                    setSelectedStudent(null);
+                    setTitle("");
+                    setDescription("");
+                    setDeadline("");
+                    setSelectedTemplate(null);
+                    setSuccess("");
+                }, 3000);
+            }
+        } catch (err) {
+            setError(
+                err.response?.data?.message ||
+                    "Произошла ошибка при создании задания. Попробуйте еще раз.",
+            );
+            console.error("Task creation failed:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-          {/* Basic Info */}
-          <div className={styles.taskFormSection}>
-            <h3>Основная информация</h3>
-            <div className={styles.formGroup}>
-              <input
-                type="text"
-                placeholder="Например: Креативные аббревиатуры"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className={styles.formInput}
-              />
-              <textarea
-                placeholder="Опишите цель задания и что студент должен делать..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className={styles.formTextarea}
-              />
-            </div>
-          </div>
+    const getInputClassName = (value, isRequired = false) => {
+        let className = "form-group__input";
+        if (isRequired && !value) {
+            className += " form-group__input--invalid";
+        } else if (value) {
+            className += " form-group__input--valid";
+        }
+        return className;
+    };
 
-          {/* Template Selection */}
-          <div className={`${styles.taskFormSection} ${styles.taskFormSectionTemplates}`}>
-            <h3>Выберите шаблон задания</h3>
-            <div className={styles.templatesGrid}>
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className={`${styles.templateCard} ${
-                    selectedTemplate?.id === template.id ? styles.templateCardSelected : ""
-                  }`}
-                  onClick={() => setSelectedTemplate(template)}
-                >
-                  <h4>{template.name}</h4>
-                  <p>{template.description}</p>
+    return (
+        <div className={styles.createTaskPage}>
+            <div className={styles.createTaskPageContainer}>
+                <div className={styles.createTaskPageHeader}>
+                    <h1 className={styles.createTaskPageTitle}>
+                        Создать новое задание
+                    </h1>
+                    <p className={styles.createTaskPageSubtitle}>
+                        Выберите студента и шаблон для создания творческого
+                        задания.
+                    </p>
                 </div>
-              ))}
+
+                <div className={styles.createTaskPageContent}>
+                    <div className={styles.createTaskPageFormSection}>
+                        <div className={styles.taskForm}>
+                            {error && (
+                                <div className="status-message error-message">
+                                    {error}
+                                </div>
+                            )}
+
+                            {success && (
+                                <div className="status-message success-message">
+                                    {success}
+                                </div>
+                            )}
+
+                            {/* Student Selection Section */}
+                            <div className={`${styles.taskFormSection}`}>
+                                <h3
+                                    className={`${styles.taskFormSectionTitle}`}
+                                >
+                                    Выбор студента
+                                </h3>
+
+                                <div className="form-group">
+                                    <label
+                                        className="form-group__label"
+                                        htmlFor="studentSearch"
+                                    >
+                                        Поиск студента *
+                                    </label>
+                                    <div className={styles.studentSearch}>
+                                        <input
+                                            id="studentSearch"
+                                            type="text"
+                                            className={getInputClassName(
+                                                selectedStudent,
+                                                true,
+                                            )}
+                                            value={studentQuery}
+                                            onChange={(e) =>
+                                                handleStudentSearch(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            disabled={isLoading}
+                                            placeholder="Введите имя или email студента..."
+                                        />
+
+                                        {showStudentSearch &&
+                                            searchResults.length > 0 && (
+                                                <div
+                                                    className={
+                                                        styles.studentDropdown
+                                                    }
+                                                >
+                                                    {searchResults.map(
+                                                        (student) => (
+                                                            <div
+                                                                key={student.id}
+                                                                className={
+                                                                    styles.studentOption
+                                                                }
+                                                                onClick={() =>
+                                                                    selectStudent(
+                                                                        student,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <div
+                                                                    className={
+                                                                        styles.studentOptionName
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        student.last_name
+                                                                    }{" "}
+                                                                    {
+                                                                        student.first_name
+                                                                    }
+                                                                </div>
+                                                                <div
+                                                                    className={
+                                                                        styles.studentOptionEmail
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        student.email
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Basic Information Section */}
+                            <div className={styles.taskFormSection}>
+                                <h3 className={styles.taskFormSectionTitle}>
+                                    Информация о задании
+                                </h3>
+
+                                <div className="form-group">
+                                    <label
+                                        className="form-group__label"
+                                        htmlFor="title"
+                                    >
+                                        Название задания *
+                                    </label>
+                                    <input
+                                        id="title"
+                                        type="text"
+                                        className={getInputClassName(
+                                            title,
+                                            true,
+                                        )}
+                                        value={title}
+                                        onChange={(e) =>
+                                            setTitle(e.target.value)
+                                        }
+                                        disabled={isLoading}
+                                        placeholder="Например: Креативные аббревиатуры"
+                                        maxLength="100"
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label
+                                        className="form-group__label"
+                                        htmlFor="description"
+                                    >
+                                        Краткое описание
+                                    </label>
+                                    <textarea
+                                        id="description"
+                                        className="form-group__textarea"
+                                        value={description}
+                                        onChange={(e) =>
+                                            setDescription(e.target.value)
+                                        }
+                                        rows="3"
+                                        disabled={isLoading}
+                                        placeholder="Опишите цель задания и что студент должен делать..."
+                                        maxLength="300"
+                                    />
+                                    <div className="form-group__helper">
+                                        {description.length}/300 символов
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label
+                                        className="form-group__label"
+                                        htmlFor="deadline"
+                                    >
+                                        Крайний срок выполнения *
+                                    </label>
+                                    <DatePicker
+                                        id="deadline"
+                                        selected={deadline}
+                                        onChange={(date) => setDeadline(date)}
+                                        showTimeSelect
+                                        timeFormat="HH:mm"
+                                        timeIntervals={15}
+                                        dateFormat="d MMMM yyyy, HH:mm"
+                                        timeCaption="Время"
+                                        locale="ru"
+                                        minDate={new Date()}
+                                        placeholderText="Выберите дату и время"
+                                        className={getInputClassName(
+                                            deadline,
+                                            true,
+                                        )}
+                                        autoComplete="off"
+                                        filterTime={(date) => {
+                                            const isToday =
+                                                new Date().toDateString() ===
+                                                date.toDateString();
+                                            return isToday
+                                                ? date > new Date()
+                                                : true;
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className={styles.taskFormActions}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        navigate("/", { viewTransition: true })
+                                    }
+                                    disabled={isLoading}
+                                >
+                                    ❌ Отмена
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    disabled={
+                                        isLoading ||
+                                        !selectedStudent ||
+                                        !title ||
+                                        !deadline ||
+                                        !selectedTemplate
+                                    }
+                                    onClick={handleSubmit}
+                                    isLoading={isLoading}
+                                    loadingText="Создание..."
+                                >
+                                    🎯 Создать задание
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Templates Section */}
+                    <div className={styles.createTaskPageTemplatesSection}>
+                        <div className={styles.templatesPanel}>
+                            <h3 className={styles.templatesPanelTitle}>
+                                🎨 Творческие шаблоны
+                            </h3>
+                            <p className={styles.templatesPanelSubtitle}>
+                                Выберите один из готовых шаблонов для создания
+                                задания
+                            </p>
+
+                            <div className={styles.templatesList}>
+                                {creativeTemplates.map((template) => (
+                                    <div
+                                        key={template.id}
+                                        className={`${styles.templateCard} ${selectedTemplate?.id === template.id ? styles.templateCardSelected : ""}`}
+                                        onClick={() => selectTemplate(template)}
+                                    >
+                                        <div
+                                            className={
+                                                styles.templateCardHeader
+                                            }
+                                        >
+                                            <div>
+                                                <h4
+                                                    className={
+                                                        styles.templateCardTitle
+                                                    }
+                                                >
+                                                    {template.name}
+                                                </h4>
+                                                <p
+                                                    className={
+                                                        styles.templateCardDescription
+                                                    }
+                                                >
+                                                    {template.description}
+                                                </p>
+                                            </div>
+                                            {selectedTemplate?.id ===
+                                                template.id && (
+                                                <div
+                                                    className={
+                                                        styles.templateCardSelected
+                                                    }
+                                                >
+                                                    ✅
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div
+                                            className={
+                                                styles.templateCardContent
+                                            }
+                                        >
+                                            <div
+                                                className={
+                                                    styles.templateCardExample
+                                                }
+                                            >
+                                                <strong>Пример:</strong>{" "}
+                                                {template.example}
+                                            </div>
+
+                                            <div
+                                                className={
+                                                    styles.templateCardInstructions
+                                                }
+                                            >
+                                                <strong>Инструкции:</strong>
+                                                <ul>
+                                                    {template.instructions.map(
+                                                        (
+                                                            instruction,
+                                                            index,
+                                                        ) => (
+                                                            <li key={index}>
+                                                                {instruction}
+                                                            </li>
+                                                        ),
+                                                    )}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className={styles.templatesPanelFooter}>
+                                <p className={styles.templatesPanelHint}>
+                                    💡 <strong>Совет:</strong> Выберите шаблон,
+                                    который лучше всего подходит для развития
+                                    творческих способностей вашего студента
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-
-          {/* Deadline */}
-          <div className={styles.taskFormSection}>
-            <h3>Срок сдачи (опционально)</h3>
-            <DatePicker
-              selected={deadline}
-              onChange={(date) => setDeadline(date as Date)}
-              showTimeSelect
-              dateFormat="Pp"
-              locale="ru"
-              minDate={new Date()}
-              placeholderText="Выберите дату и время"
-              className={styles.formInput}
-            />
-          </div>
-
-          <div className={styles.formActions}>
-            <Button type="submit" variant="primary" disabled={isLoading}>
-              {isLoading ? "Создание..." : "Создать задание"}
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/tasks")}>
-              Отмена
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default CreateAssignmentPage;

@@ -13,8 +13,8 @@ export type NavbarState = "static" | "hidden" | "floating";
  * @param topThreshold     distance from the top of the page to consider it as "static"
  */
 export const useScrollNavbar = (
-    scrollThreshold = 12,
-    topThreshold = 8,
+    scrollThreshold = 20,
+    topThreshold = 0.1,
 ): NavbarState => {
     const [state, setState] = useState<NavbarState>("static");
     const lastScrollY = useRef(0);

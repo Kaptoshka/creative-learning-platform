@@ -10,35 +10,44 @@ import AuthPage from "@/pages/AuthPage";
 import TeacherDashboardPage from "@/pages/TeacherDashboardPage";
 import TaskDetailPage from "@/pages/TaskDetailPage";
 import { AuthProvider } from "@/context/AuthProvider";
+import { AlertProvider } from "@/context/AlertContext";
 import Navigation from "@/components/Navigation";
 import ProtectedRoutes from "@/components/ProtectedRoutes";
 import "@/index.css";
 
 function App() {
     return (
-        <AuthProvider>
-            <Navigation />
-            <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/tasks" element={<TasksPage />} />
-                <Route path="/task/:id" element={<TaskPage />} />
-                <Route path="/task-detail/:id" element={<TaskDetailPage />} />
-                <Route element={<ProtectedRoutes />}>
-                    <Route path="/dashboard" element={<DashboardPage />} />
+        <AlertProvider>
+            <AuthProvider>
+                <Navigation />
+                <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/tasks" element={<TasksPage />} />
+                    <Route path="/task/:id" element={<TaskPage />} />
                     <Route
-                        path="/create-assignment"
-                        element={<CreateAssignmentPage />}
+                        path="/task-detail/:id"
+                        element={<TaskDetailPage />}
                     />
-                    <Route path="/review" element={<ReviewPage />} />
-                    <Route path="/submissions" element={<SubmissionsPage />} />
-                    <Route
-                        path="/teacher-dashboard"
-                        element={<TeacherDashboardPage />}
-                    />
-                </Route>
-            </Routes>
-        </AuthProvider>
+                    <Route element={<ProtectedRoutes />}>
+                        <Route path="/dashboard" element={<DashboardPage />} />
+                        <Route
+                            path="/create-assignment"
+                            element={<CreateAssignmentPage />}
+                        />
+                        <Route path="/review" element={<ReviewPage />} />
+                        <Route
+                            path="/submissions"
+                            element={<SubmissionsPage />}
+                        />
+                        <Route
+                            path="/teacher-dashboard"
+                            element={<TeacherDashboardPage />}
+                        />
+                    </Route>
+                </Routes>
+            </AuthProvider>
+        </AlertProvider>
     );
 }
 
