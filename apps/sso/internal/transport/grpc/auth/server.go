@@ -35,12 +35,12 @@ type Auth interface {
 }
 
 type serverAPI struct {
-	ssov1.UnimplementedAuthServer
+	ssov1.UnimplementedAuthServiceServer
 	auth Auth
 }
 
 func Register(gRPC *grpc.Server, auth Auth) {
-	ssov1.RegisterAuthServer(gRPC, &serverAPI{auth: auth})
+	ssov1.RegisterAuthServiceServer(gRPC, &serverAPI{auth: auth})
 }
 
 // Login implements login of the user in SSO
@@ -83,7 +83,6 @@ func (s *serverAPI) Register(
 		req.GetLastName(),
 		req.GetMiddleName(),
 	)
-
 	if err != nil {
 		if errors.Is(err, auth.ErrUserExists) {
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
