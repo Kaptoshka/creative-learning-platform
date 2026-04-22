@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"time"
 
@@ -24,13 +23,14 @@ type Assignments interface {
 	Create(
 		ctx context.Context,
 		creatorID uuid.UUID,
-		dto *dto.CreateAssignment,
+		dto dto.CreateAssignment,
 	) (uuid.UUID, error)
 	Update(
 		ctx context.Context,
+		callerID uuid.UUID,
 		assignmentID uuid.UUID,
 		updates map[string]any,
-		targets []*dto.Target,
+		targets []dto.Target,
 	) (*models.AssignmentTemplate, error)
 	Delete(
 		ctx context.Context,
@@ -39,20 +39,24 @@ type Assignments interface {
 	GetByID(
 		ctx context.Context,
 		assignmentID uuid.UUID,
-	) (*models.AssignmentTemplate, []*dto.Target, error)
+	) (
+		*models.AssignmentTemplate,
+		[]dto.Target,
+		error,
+	)
 	List(
 		ctx context.Context,
-		creatorID uuid.UUID,
-		pageSize int32,
+		callerID uuid.UUID,
+		limit int,
 		pageToken string,
-	) ([]*models.AssignmentTemplateLight, string, error)
-	ListByUserID(
+	) ([]models.AssignmentTemplateLight, string, error)
+	ListByStudentID(
 		ctx context.Context,
-		userID uuid.UUID,
-		pageSize int32,
+		studentID uuid.UUID,
+		limit int32,
 		pageToken string,
 		statusFilter domain.SubmissionStatus,
-	) ([]*models.AssignmentTemplateLight, string, error)
+	) ([]dto.StudentItem, string, error)
 	Start(
 		ctx context.Context,
 		studentID uuid.UUID,
@@ -61,12 +65,12 @@ type Assignments interface {
 	SaveDraft(
 		ctx context.Context,
 		studentID uuid.UUID,
-		payload json.RawMessage,
+		dto dto.SaveVersion,
 	) (uuid.UUID, error)
 	Submit(
 		ctx context.Context,
 		studentID uuid.UUID,
-		payload json.RawMessage,
+		dto dto.SaveVersion,
 	) (uuid.UUID, domain.SubmissionStatus, error)
 }
 
@@ -74,17 +78,15 @@ type Submissions interface {
 	ListByTemplateID(
 		ctx context.Context,
 		templateID uuid.UUID,
-		pageSize int32,
+		limit int,
 		pageToken string,
-	) ([]*models.SubmissionItem, string, error)
-	GetByID(
+		filter domain.SubmissionStatus,
+	) ([]models.Submission, string, error)
+	GetDetails(
 		ctx context.Context,
 		submissionID uuid.UUID,
 	) (
-		*models.AssignmentTemplate,
-		*models.Submission,
-		[]*models.SubmissionVersion,
-		[]*models.Feedback,
+		*dto.FullSubmission,
 		error,
 	)
 }
@@ -93,7 +95,7 @@ type Feedbacks interface {
 	Provide(
 		ctx context.Context,
 		graderID uuid.UUID,
-		dto *dto.Feedback,
+		dto dto.Feedback,
 	) error
 }
 
@@ -137,7 +139,7 @@ func (s *serverAPI) CreateAssignment(
 			return nil, status.Error(codes.InvalidArgument, "invalid target")
 		}
 
-		targets = append(targets, target)
+		targets = append(targets, &target)
 	}
 
 	widgetID, err := uuid.Parse(req.WidgetId)
@@ -152,7 +154,7 @@ func (s *serverAPI) CreateAssignment(
 
 	dueTime := req.DueDate.AsTime()
 
-	assignmentDTO := &dto.CreateAssignment{
+	assignmentDTO := dto.CreateAssignment{
 		Title:        req.Title,
 		Description:  req.Description,
 		WidgetID:     widgetID,
@@ -179,13 +181,35 @@ func (s *serverAPI) UpdateAssignment(
 	ctx context.Context,
 	req *tasksv1.UpdateAssignmentRequest,
 ) (*tasksv1.UpdateAssignmentResponse, error) {
+	userIDStr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"authentication required",
+		)
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid user id",
+		)
+	}
+
 	userRole := auth.GetUserRole(ctx)
 	if userRole != auth.RoleAdmin && userRole != auth.RoleTeacher {
-		return nil, status.Error(codes.PermissionDenied, "user not allowed to update assignment")
+		return nil, status.Error(
+			codes.PermissionDenied,
+			"user not allowed to update assignment",
+		)
 	}
 
 	if !req.UpdateMask.IsValid(req.Template) {
-		return nil, status.Error(codes.InvalidArgument, "invalid update mask")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid update mask",
+		)
 	}
 
 	updates := make(map[string]any)
@@ -205,12 +229,15 @@ func (s *serverAPI) UpdateAssignment(
 		}
 	}
 
-	targets := make([]*dto.Target, 0, len(req.Targets))
+	targets := make([]dto.Target, 0, len(req.Targets))
 
 	for _, trg := range req.Targets {
 		target, err := processTarget(trg)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "invalid target")
+			return nil, status.Error(
+				codes.InvalidArgument,
+				"invalid target",
+			)
 		}
 
 		targets = append(targets, target)
@@ -218,12 +245,18 @@ func (s *serverAPI) UpdateAssignment(
 
 	assignmentID, err := uuid.Parse(req.AssignmentId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "assignment ID cannot be parsed")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"assignment ID cannot be parsed",
+		)
 	}
 
-	updateModel, err := s.assignments.Update(ctx, assignmentID, updates, targets)
+	updateModel, err := s.assignments.Update(ctx, userID, assignmentID, updates, targets)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "cannot update assignment")
+		return nil, status.Error(
+			codes.Internal,
+			"cannot update assignment",
+		)
 	}
 
 	widgetConfig, err := rawMessageToStructPB(updateModel.WidgetConfig)
@@ -248,32 +281,32 @@ func (s *serverAPI) UpdateAssignment(
 
 func processTarget(
 	t *tasksv1.AssignmentTarget,
-) (*dto.Target, error) {
+) (dto.Target, error) {
 	switch v := t.GetTarget().(type) {
 	case *tasksv1.AssignmentTarget_GroupId:
 		groupID, err := uuid.Parse(v.GroupId)
 		if err != nil {
-			return nil, errors.New("invalid group ID")
+			return dto.Target{}, errors.New("invalid group ID")
 		}
 
-		return &dto.Target{
+		return dto.Target{
 			GroupID: &groupID,
 		}, nil
 	case *tasksv1.AssignmentTarget_StudentId:
 		studentID, err := uuid.Parse(v.StudentId)
 		if err != nil {
-			return nil, errors.New("invalid student ID")
+			return dto.Target{}, errors.New("invalid student ID")
 		}
 
-		return &dto.Target{
+		return dto.Target{
 			StudentID: &studentID,
 		}, nil
 
 	case nil:
-		return nil, nil
+		return dto.Target{}, nil
 
 	default:
-		return nil, errors.New("unknown target type")
+		return dto.Target{}, errors.New("unknown target type")
 	}
 }
 
@@ -284,18 +317,27 @@ func (s *serverAPI) DeleteAssignment(
 	userRole := auth.GetUserRole(ctx)
 
 	if userRole != auth.RoleTeacher && userRole != auth.RoleAdmin {
-		return nil, status.Error(codes.PermissionDenied, "user not allowed to delete assignments")
+		return nil, status.Error(
+			codes.PermissionDenied,
+			"user not allowed to delete assignments",
+		)
 	}
 
 	assignmentID, err := uuid.Parse(req.Id)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid assignment ID format")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid assignment ID format",
+		)
 	}
 
 	err = s.assignments.Delete(ctx, assignmentID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "assignment not found")
+			return nil, status.Error(
+				codes.NotFound,
+				"assignment not found",
+			)
 		}
 
 		return nil, status.Error(codes.Internal, err.Error())
@@ -311,25 +353,40 @@ func (s *serverAPI) GetAssignment(
 	userRole := auth.GetUserRole(ctx)
 
 	if userRole != auth.RoleTeacher && userRole != auth.RoleAdmin {
-		return nil, status.Error(codes.PermissionDenied, "user not allowed to delete assignments")
+		return nil, status.Error(
+			codes.PermissionDenied,
+			"user not allowed to delete assignments",
+		)
 	}
 
 	assignmentID, err := uuid.Parse(req.Id)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid assignment ID format")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid assignment ID format",
+		)
 	}
 
 	assignment, targets, err := s.assignments.GetByID(ctx, assignmentID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "assignment with provided ID not found")
+			return nil, status.Error(
+				codes.NotFound,
+				"assignment with provided ID not found",
+			)
 		}
-		return nil, status.Error(codes.Internal, "failed to retrieve assignment")
+		return nil, status.Error(
+			codes.Internal,
+			"failed to retrieve assignment",
+		)
 	}
 
 	widgetConfig, err := rawMessageToStructPB(assignment.WidgetConfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to convert widget config")
+		return nil, status.Error(
+			codes.Internal,
+			"failed to convert widget config",
+		)
 	}
 
 	assignmentProto := &tasksv1.AssignmentTemplate{
@@ -373,12 +430,18 @@ func (s *serverAPI) ListAssignments(
 ) (*tasksv1.ListAssignmentsResponse, error) {
 	userIDstr, err := auth.GetUserID(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "authentication required")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"authentication required",
+		)
 	}
 
 	targetID, err := uuid.Parse(userIDstr)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid user ID in token")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid user ID in token",
+		)
 	}
 
 	role := auth.GetUserRole(ctx)
@@ -386,7 +449,10 @@ func (s *serverAPI) ListAssignments(
 	if role == auth.RoleAdmin && req.CreatorId != "" {
 		parsedCreatorID, err := uuid.Parse(req.CreatorId)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "invalid creator ID format")
+			return nil, status.Error(
+				codes.InvalidArgument,
+				"invalid creator ID format",
+			)
 		}
 		targetID = parsedCreatorID
 	}
@@ -396,7 +462,7 @@ func (s *serverAPI) ListAssignments(
 		limit = domain.DefaultPageSizeLimit
 	}
 
-	assignments, token, err := s.assignments.List(ctx, targetID, limit, req.PageToken)
+	assignments, token, err := s.assignments.List(ctx, targetID, int(limit), req.PageToken)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to list assignments")
 	}
@@ -424,7 +490,10 @@ func (s *serverAPI) ListAssignmentSubmissions(
 ) (*tasksv1.ListAssignmentSubmissionsResponse, error) {
 	templateID, err := uuid.Parse(req.TemplateId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid template ID format")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid template ID format",
+		)
 	}
 
 	limit := req.PageSize
@@ -432,35 +501,35 @@ func (s *serverAPI) ListAssignmentSubmissions(
 		limit = domain.DefaultPageSizeLimit
 	}
 
-	submissions, token, err := s.submissions.ListByTemplateID(ctx, templateID, limit, req.PageToken)
+	submissionStatus := convertProtoStatus(req.GetStatusFilter())
+
+	submissions, token, err := s.submissions.ListByTemplateID(
+		ctx, templateID, int(limit), req.PageToken, submissionStatus,
+	)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to list submissions")
+		return nil, status.Error(
+			codes.Internal,
+			"failed to list submissions",
+		)
 	}
 
 	submissionsProto := make([]*tasksv1.Submission, 0, len(submissions))
-	for _, item := range submissions {
-		payload, err := rawMessageToStructPB(item.SubmissionVersion.Payload)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "failed to parse submission payload")
-		}
-
-		submissionVersion := &tasksv1.SubmissionVersion{
-			Id:               item.SubmissionVersion.ID.String(),
-			VersionNumber:    item.SubmissionVersion.VersionNumber,
-			Payload:          payload,
-			TimeSpentSeconds: durationpb.New(item.SubmissionVersion.TimeSpentSeconds),
-			IsAutosave:       item.SubmissionVersion.IsAutosave,
-			CreatedAt:        timestamppb.New(item.SubmissionVersion.CreatedAt),
+	var versionProto *tasksv1.SubmissionVersionLight
+	for _, sub := range submissions {
+		versionProto = &tasksv1.SubmissionVersionLight{
+			Id:            sub.LastVersion.ID.String(),
+			VersionNumber: *sub.LastVersion.VersionNumber,
+			CreatedAt:     timestamppb.New(*sub.LastVersion.CreatedAt),
 		}
 
 		itemProto := &tasksv1.Submission{
-			Id:            item.Submission.ID.String(),
-			TemplateId:    item.Submission.TemplateID.String(),
-			StudentId:     item.Submission.StudentID.String(),
-			Status:        convertSubmissionStatus(item.Submission.Status),
-			StartedAt:     timestamppb.New(item.Submission.StartedAt),
-			SubmittedAt:   timestamppb.New(*item.Submission.SubmittedAt),
-			LatestVersion: submissionVersion,
+			Id:            sub.ID.String(),
+			TemplateId:    sub.TemplateID.String(),
+			StudentId:     sub.StudentID.String(),
+			Status:        convertSubmissionStatus(sub.Status),
+			StartedAt:     timestamppb.New(sub.StartedAt),
+			SubmittedAt:   timestamppb.New(*sub.SubmittedAt),
+			LatestVersion: versionProto,
 		}
 
 		submissionsProto = append(submissionsProto, itemProto)
@@ -478,50 +547,55 @@ func (s *serverAPI) GetStudentSubmission(
 ) (*tasksv1.GetStudentSubmissionResponse, error) {
 	submissionID, err := uuid.Parse(req.SubmissionId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid submission ID format")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid submission ID format",
+		)
 	}
 
-	assignment, submission, submissionVersions, feedbacks, err := s.submissions.GetByID(ctx, submissionID)
+	details, err := s.submissions.GetDetails(ctx, submissionID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "submission not found")
+			return nil, status.Error(
+				codes.NotFound,
+				"submission not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to retrieve data")
 	}
 
-	widgetConfig, err := rawMessageToStructPB(assignment.WidgetConfig)
+	widgetConfig, err := rawMessageToStructPB(details.Assignment.WidgetConfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to parse widget config")
 	}
 
 	templateProto := &tasksv1.AssignmentTemplate{
-		Id:           assignment.ID.String(),
-		CreatorId:    assignment.CreatorID.String(),
-		Title:        assignment.Title,
-		Description:  assignment.Description,
-		WidgetId:     assignment.WidgetID.String(),
+		Id:           details.Assignment.ID.String(),
+		CreatorId:    details.Assignment.CreatorID.String(),
+		Title:        details.Assignment.Title,
+		Description:  details.Assignment.Description,
+		WidgetId:     details.Assignment.WidgetID.String(),
 		WidgetConfig: widgetConfig,
-		DueDate:      timestamppb.New(*assignment.DueDate),
-		CreatedAt:    timestamppb.New(assignment.CreatedAt),
-		UpdatedAt:    timestamppb.New(assignment.UpdatedAt),
+		DueDate:      timestamppb.New(*details.Assignment.DueDate),
+		CreatedAt:    timestamppb.New(details.Assignment.CreatedAt),
+		UpdatedAt:    timestamppb.New(details.Assignment.UpdatedAt),
 	}
 
 	var submittedAtPb *timestamppb.Timestamp
-	if submission.SubmittedAt != nil {
-		submittedAtPb = timestamppb.New(*submission.SubmittedAt)
+	if details.Submission.SubmittedAt != nil {
+		submittedAtPb = timestamppb.New(*details.Submission.SubmittedAt)
 	}
 
 	submissionProto := &tasksv1.Submission{
-		Id:          submission.ID.String(),
-		TemplateId:  submission.TemplateID.String(),
-		StudentId:   submission.StudentID.String(),
-		Status:      convertSubmissionStatus(submission.Status),
-		StartedAt:   timestamppb.New(submission.StartedAt),
+		Id:          details.Submission.ID.String(),
+		TemplateId:  details.Submission.TemplateID.String(),
+		StudentId:   details.Submission.StudentID.String(),
+		Status:      convertSubmissionStatus(details.Submission.Status),
+		StartedAt:   timestamppb.New(details.Submission.StartedAt),
 		SubmittedAt: submittedAtPb,
 	}
 
-	versionsHistory := make([]*tasksv1.SubmissionVersion, 0, len(submissionVersions))
-	for _, version := range submissionVersions {
+	versionsHistory := make([]*tasksv1.SubmissionVersion, 0, len(details.Versions))
+	for _, version := range details.Versions {
 		versionPayload, err := rawMessageToStructPB(version.Payload)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to parse version payload")
@@ -537,8 +611,8 @@ func (s *serverAPI) GetStudentSubmission(
 		})
 	}
 
-	feedbackHistory := make([]*tasksv1.Feedback, 0, len(feedbacks))
-	for _, feedback := range feedbacks {
+	feedbackHistory := make([]*tasksv1.Feedback, 0, len(details.Feedbacks))
+	for _, feedback := range details.Feedbacks {
 		feedbackPayload, err := rawMessageToStructPB(feedback.Payload)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to parse feedback payload")
@@ -574,30 +648,46 @@ func (s *serverAPI) ProvideFeedback(
 ) (*tasksv1.ProvideFeedbackResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "authentication required")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"authentication required",
+		)
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid user ID")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid user ID",
+		)
 	}
 
 	submissionID, err := uuid.Parse(req.GetSubmissionId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid submission ID")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid submission ID",
+		)
 	}
 
 	versionID, err := uuid.Parse(req.GetVersionId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid submission version ID")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid submission version ID",
+		)
 	}
 
 	feedbackPayload, err := structPBToRawMessage(req.GetPayload())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid payload: %v", err)
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"invalid payload: %v",
+			err,
+		)
 	}
 
-	dto := &dto.Feedback{
+	dto := dto.Feedback{
 		VersionID:    versionID,
 		SubmissionID: submissionID,
 		TextContent:  req.GetTextContent(),
@@ -612,9 +702,15 @@ func (s *serverAPI) ProvideFeedback(
 	)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "submission version not found")
+			return nil, status.Error(
+				codes.NotFound,
+				"submission version not found",
+			)
 		}
-		return nil, status.Error(codes.Internal, "failed to provide feedback")
+		return nil, status.Error(
+			codes.Internal,
+			"failed to provide feedback",
+		)
 	}
 
 	return &tasksv1.ProvideFeedbackResponse{}, nil
@@ -626,12 +722,18 @@ func (s *serverAPI) ListMyAssignments(
 ) (*tasksv1.ListMyAssignmentsResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "authentication required")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"authentication required",
+		)
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"invalid user ID in token",
+		)
 	}
 
 	limit := req.GetPageSize()
@@ -641,7 +743,7 @@ func (s *serverAPI) ListMyAssignments(
 
 	statusFilter := convertProtoStatus(req.GetStatusFilter())
 
-	assignments, token, err := s.assignments.ListByUserID(
+	assignments, token, err := s.assignments.ListByStudentID(
 		ctx,
 		userID,
 		limit,
@@ -649,28 +751,27 @@ func (s *serverAPI) ListMyAssignments(
 		statusFilter,
 	)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to list assignments")
+		return nil, status.Error(
+			codes.Internal,
+			"failed to list assignments",
+		)
 	}
 
 	items := make([]*tasksv1.ListMyAssignmentsResponse_StudentItem, 0, len(assignments))
 
 	for _, item := range assignments {
 		itemTemplate := &tasksv1.AssignmentTemplateLight{
-			Id:         item.ID.String(),
+			Id:         item.AssignmentID.String(),
 			Title:      item.Title,
 			WidgetType: item.WidgetType,
 			DueDate:    timestamppb.New(*item.DueDate),
 		}
-		itemStatus := convertSubmissionStatus(item.Status)
-		hasFeedback := false
-		if item.Status == domain.StatusGraded || item.Status == domain.StatusReturned {
-			hasFeedback = true
-		}
+		itemStatus := convertSubmissionStatus(*item.Status)
 
 		items = append(items, &tasksv1.ListMyAssignmentsResponse_StudentItem{
 			Template:    itemTemplate,
 			Status:      itemStatus,
-			HasFeedback: hasFeedback,
+			HasFeedback: item.HasFeedback,
 		})
 	}
 
@@ -686,17 +787,26 @@ func (s *serverAPI) StartAssignment(
 ) (*tasksv1.StartAssignmentResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "authentication required")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"authentication required",
+		)
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"invalid user ID in token",
+		)
 	}
 
 	templateID, err := uuid.Parse(req.GetTemplateId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid template ID")
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"invalid template ID",
+		)
 	}
 
 	submissionID, startedAt, err := s.assignments.Start(
@@ -705,7 +815,10 @@ func (s *serverAPI) StartAssignment(
 		templateID,
 	)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to start assignment")
+		return nil, status.Error(
+			codes.Internal,
+			"failed to start assignment",
+		)
 	}
 
 	return &tasksv1.StartAssignmentResponse{
@@ -720,26 +833,54 @@ func (s *serverAPI) SaveAssignmentDraft(
 ) (*tasksv1.SaveAssignmentDraftResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "authentication required")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"authentication required",
+		)
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"invalid user ID in token",
+		)
 	}
 
 	submissionPayload, err := structPBToRawMessage(req.GetPayload())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid payload: %v", err)
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"invalid payload: %v",
+			err,
+		)
+	}
+
+	submissionID, err := uuid.Parse(req.GetSubmissionId())
+	if err != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"invalid submission ID: %v",
+			err,
+		)
+	}
+
+	saveVersion := dto.SaveVersion{
+		SubmissionID: submissionID,
+		Payload:      submissionPayload,
+		TimeSpent:    req.GetTimeSpent().AsDuration(),
 	}
 
 	submissionVersionID, err := s.assignments.SaveDraft(
 		ctx,
 		userID,
-		submissionPayload,
+		saveVersion,
 	)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to save assignment draft")
+		return nil, status.Error(
+			codes.Internal,
+			"failed to save assignment draft",
+		)
 	}
 
 	return &tasksv1.SaveAssignmentDraftResponse{
@@ -754,26 +895,54 @@ func (s *serverAPI) SubmitAssignment(
 ) (*tasksv1.SubmitAssignmentResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "authentication required")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"authentication required",
+		)
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid user ID in token")
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"invalid user ID in token",
+		)
 	}
 
 	submissionPayload, err := structPBToRawMessage(req.GetPayload())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid payload: %v", err)
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"invalid payload: %v",
+			err,
+		)
+	}
+
+	submissionID, err := uuid.Parse(req.GetSubmissionId())
+	if err != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"invalid submission ID: %v",
+			err,
+		)
+	}
+
+	saveVersion := dto.SaveVersion{
+		SubmissionID: submissionID,
+		Payload:      submissionPayload,
+		TimeSpent:    req.GetTimeSpent().AsDuration(),
 	}
 
 	submissionID, submissionStatus, err := s.assignments.Submit(
 		ctx,
 		userID,
-		submissionPayload,
+		saveVersion,
 	)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to submit assignment")
+		return nil, status.Error(
+			codes.Internal,
+			"failed to submit assignment",
+		)
 	}
 
 	return &tasksv1.SubmitAssignmentResponse{

@@ -11,130 +11,30 @@ import (
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/dto"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/domain/models"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/ports"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/service"
 
 	"github.com/google/uuid"
 )
 
 type assignmentService struct {
-	log                *slog.Logger
-	assignmentSaver    AssignmentSaver
-	assignmentProvider AssignmentProvider
-	submissionSaver    SubmissionSaver
-	submissionProvider SubmissionProvider
-	feedbackSaver      FeedbackSaver
-	feedbackProvider   FeedbackProvider
-}
-
-type AssignmentSaver interface {
-	CreateAssignment(
-		ctx context.Context,
-		template *models.AssignmentTemplate,
-		targets []*models.AssignmentTarget,
-	) error
-	UpdateAssignment(
-		ctx context.Context,
-		id uuid.UUID,
-		updates map[string]any,
-		newTargets []*models.AssignmentTarget,
-	) (*models.AssignmentTemplate, error)
-	DeleteAssignment(
-		ctx context.Context,
-		id uuid.UUID,
-	) error
-}
-
-type AssignmentProvider interface {
-	ByID(
-		ctx context.Context,
-		assignmentID uuid.UUID,
-	) (
-		*models.AssignmentTemplate,
-		[]*models.AssignmentTarget,
-		error,
-	)
-	List(
-		ctx context.Context,
-		creatorID uuid.UUID,
-		limit int,
-		offset int,
-	) ([]*models.AssignmentTemplate, error)
-}
-
-type SubmissionSaver interface {
-	CreateSubmission(
-		ctx context.Context,
-		submission *models.Submission,
-	) error
-	AddVersion(
-		ctx context.Context,
-		version *models.SubmissionVersion,
-		isAutosave bool,
-	) error
-}
-
-type SubmissionProvider interface {
-	ByID(
-		ctx context.Context,
-		submissionID uuid.UUID,
-	) (
-		*models.Submission,
-		error,
-	)
-	VersionsBySubmissionID(
-		ctx context.Context,
-		submissionID uuid.UUID,
-	) ([]*models.SubmissionVersion, error)
-	ListByStudentID(
-		ctx context.Context,
-		studentID uuid.UUID,
-		limit int,
-		offset int,
-		statusFilter domain.SubmissionStatus,
-	) ([]*dto.StudentItem, error)
-	ListByAssignmentID(
-		ctx context.Context,
-		templateID uuid.UUID,
-		limit int,
-		offset int,
-		filter domain.SubmissionStatus,
-	) (
-		[]*models.Submission,
-		error,
-	)
-}
-
-type FeedbackSaver interface {
-	CreateFeedback(
-		ctx context.Context,
-		feedback *models.Feedback,
-		newStatus *domain.SubmissionStatus,
-	) error
-}
-
-type FeedbackProvider interface {
-	BySubmissionID(
-		ctx context.Context,
-		submissionID uuid.UUID,
-	) ([]*models.Feedback, error)
+	log            *slog.Logger
+	assignmentRepo ports.AssignmentRepo
+	submissionRepo ports.SubmissionRepo
+	feedbackRepo   ports.FeedbackRepo
 }
 
 func New(
 	log *slog.Logger,
-	assignmentProvider AssignmentProvider,
-	assignmentSaver AssignmentSaver,
-	submissionProvider SubmissionProvider,
-	submissionSaver SubmissionSaver,
-	feedbackProvider FeedbackProvider,
-	feedbackSaver FeedbackSaver,
+	assignmentRepo ports.AssignmentRepo,
+	submissionRepo ports.SubmissionRepo,
+	feedbackRepo ports.FeedbackRepo,
 ) *assignmentService {
 	return &assignmentService{
-		log:                log,
-		assignmentProvider: assignmentProvider,
-		assignmentSaver:    assignmentSaver,
-		submissionProvider: submissionProvider,
-		submissionSaver:    submissionSaver,
-		feedbackProvider:   feedbackProvider,
+		log:            log,
+		assignmentRepo: assignmentRepo,
+		submissionRepo: submissionRepo,
+		feedbackRepo:   feedbackRepo,
 	}
 }
 
@@ -162,7 +62,7 @@ func (s *assignmentService) Create(
 		return uuid.Nil, fmt.Errorf("uuid generation error: %w", err)
 	}
 
-	tmpl := &models.AssignmentTemplate{
+	tmpl := models.AssignmentTemplate{
 		ID:           tmplID,
 		CreatorID:    creatorID,
 		Title:        dto.Title,
@@ -174,14 +74,14 @@ func (s *assignmentService) Create(
 		UpdatedAt:    now,
 	}
 
-	targets := make([]*models.AssignmentTarget, 0, len(dto.Targets))
+	targets := make([]models.AssignmentTarget, 0, len(dto.Targets))
 	var targetID uuid.UUID
 	for _, t := range dto.Targets {
 		targetID, err = uuid.NewV7()
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("uuid generation error: %w", err)
 		}
-		targets = append(targets, &models.AssignmentTarget{
+		targets = append(targets, models.AssignmentTarget{
 			ID:         targetID,
 			TemplateID: tmpl.ID,
 			GroupID:    t.GroupID,
@@ -191,7 +91,7 @@ func (s *assignmentService) Create(
 		})
 	}
 
-	if err := s.assignmentSaver.CreateAssignment(ctx, tmpl, targets); err != nil {
+	if err := s.assignmentRepo.CreateAssignment(ctx, tmpl, targets); err != nil {
 		return uuid.Nil, fmt.Errorf("storage error: %w", err)
 	}
 
@@ -240,7 +140,7 @@ func (s *assignmentService) Update(
 		slog.String("op", op),
 	)
 
-	tmpl, _, err := s.assignmentProvider.ByID(ctx, id)
+	tmpl, _, err := s.assignmentRepo.GetAssignmentByID(ctx, id)
 	if err != nil {
 		log.Error(
 			"failed to fetch assignment",
@@ -287,7 +187,7 @@ func (s *assignmentService) Update(
 
 	updates["updated_at"] = time.Now().UTC()
 
-	updated, err := s.assignmentSaver.UpdateAssignment(
+	updated, err := s.assignmentRepo.UpdateAssignment(
 		ctx, id, updates, domainTargets,
 	)
 	if err != nil {
@@ -392,7 +292,7 @@ func (s *assignmentService) DeleteAssignment(
 
 	log.Debug("attempting to delete assignment")
 
-	tmpl, _, err := s.assignmentProvider.ByID(ctx, id)
+	tmpl, _, err := s.assignmentRepo.GetAssignmentByID(ctx, id)
 	if err != nil {
 		log.Error(
 			"failed to fetch assignment",
@@ -416,7 +316,7 @@ func (s *assignmentService) DeleteAssignment(
 		return fmt.Errorf("user is not allowed to delete assignment: %w", domain.ErrForbidden)
 	}
 
-	if err := s.assignmentSaver.DeleteAssignment(ctx, id); err != nil {
+	if err := s.assignmentRepo.DeleteAssignment(ctx, id); err != nil {
 		log.Error(
 			"failed to delete assignment",
 			"id",
@@ -441,7 +341,7 @@ func (s *assignmentService) GetTemplate(
 	const op = "services.assignment.GetTemplate"
 	log := s.log.With(slog.String("op", op))
 
-	tmpl, targets, err := s.assignmentProvider.ByID(ctx, id)
+	tmpl, targets, err := s.assignmentRepo.GetAssignmentByID(ctx, id)
 	if err != nil {
 		log.Error(
 			"failed to get assignment template",
@@ -482,7 +382,7 @@ func (s *assignmentService) List(
 
 	limit = service.NormalizeLimit(limit)
 
-	templates, err := s.assignmentProvider.List(ctx, creatorID, limit, offset)
+	templates, err := s.assignmentRepo.ListAssignmentsByCreator(ctx, creatorID, limit, offset)
 	if err != nil {
 		log.Error(
 			"failed to list assignment templates",
@@ -522,7 +422,7 @@ func (s *assignmentService) StartAssignment(
 	const op = "services.assignment.StartAssignment"
 	log := s.log.With(slog.String("op", op))
 
-	_, _, err := s.assignmentProvider.ByID(ctx, templateID)
+	_, _, err := s.assignmentRepo.GetAssignmentByID(ctx, templateID)
 	if err != nil {
 		log.Error(
 			"failed to get assignment template",
@@ -544,7 +444,7 @@ func (s *assignmentService) StartAssignment(
 
 	now := time.Now().UTC()
 
-	sub := &models.Submission{
+	sub := models.Submission{
 		ID:         id,
 		TemplateID: templateID,
 		StudentID:  studentID,
@@ -552,7 +452,7 @@ func (s *assignmentService) StartAssignment(
 		StartedAt:  now,
 	}
 
-	if err := s.submissionSaver.CreateSubmission(ctx, sub); err != nil {
+	if err := s.submissionRepo.CreateSubmission(ctx, sub); err != nil {
 		if errors.Is(err, domain.ErrAlreadyExists) {
 			log.Warn(
 				"student already started assignment",
@@ -588,7 +488,7 @@ func (s *assignmentService) SaveDraft(
 	const op = "services.assignment.SaveDraft"
 	log := s.log.With(slog.String("op", op))
 
-	sub, err := s.submissionProvider.ByID(ctx, dto.SubmissionID)
+	sub, err := s.submissionRepo.GetSubmissionByID(ctx, dto.SubmissionID)
 	if err != nil {
 		log.Error(
 			"failed to get submission",
@@ -628,7 +528,7 @@ func (s *assignmentService) SaveDraft(
 		return uuid.Nil, fmt.Errorf("%w", err)
 	}
 
-	version := &models.SubmissionVersion{
+	version := models.SubmissionVersion{
 		ID:               id,
 		SubmissionID:     dto.SubmissionID,
 		Payload:          dto.Payload,
@@ -637,7 +537,7 @@ func (s *assignmentService) SaveDraft(
 		CreatedAt:        time.Now().UTC(),
 	}
 
-	if err := s.submissionSaver.AddVersion(ctx, version, false); err != nil {
+	if err := s.submissionRepo.AddSubmissionVersion(ctx, version, false); err != nil {
 		log.Error(
 			"failed to save draft version",
 			"submission_id", dto.SubmissionID.String(),
@@ -665,7 +565,7 @@ func (s *assignmentService) SubmitAssignment(
 	const op = "services.assignment.SubmitAssignment"
 	log := s.log.With(slog.String("op", op))
 
-	sub, err := s.submissionProvider.ByID(ctx, dto.SubmissionID)
+	sub, err := s.submissionRepo.GetSubmissionByID(ctx, dto.SubmissionID)
 	if err != nil {
 		log.Error(
 			"failed to get submission",
@@ -705,7 +605,7 @@ func (s *assignmentService) SubmitAssignment(
 		return uuid.Nil, "", fmt.Errorf("%w", err)
 	}
 
-	version := &models.SubmissionVersion{
+	version := models.SubmissionVersion{
 		ID:               id,
 		SubmissionID:     dto.SubmissionID,
 		Payload:          dto.Payload,
@@ -714,7 +614,7 @@ func (s *assignmentService) SubmitAssignment(
 		CreatedAt:        time.Now().UTC(),
 	}
 
-	if err := s.submissionSaver.AddVersion(ctx, version, true); err != nil {
+	if err := s.submissionRepo.AddSubmissionVersion(ctx, version, true); err != nil {
 		log.Error(
 			"failed to submit assignment",
 			"submission_id", dto.SubmissionID.String(),
@@ -744,7 +644,7 @@ func (s *assignmentService) ListSubmissions(
 	const op = "services.assignment.ListSubmissions"
 	log := s.log.With(slog.String("op", op))
 
-	_, _, err := s.assignmentProvider.ByID(ctx, templateID)
+	_, _, err := s.assignmentRepo.GetAssignmentByID(ctx, templateID)
 	if err != nil {
 		log.Error(
 			"failed to get assignment template",
@@ -774,7 +674,7 @@ func (s *assignmentService) ListSubmissions(
 		return nil, "", fmt.Errorf("%w", err)
 	}
 
-	submissions, err := s.submissionProvider.ListByAssignmentID(ctx, templateID, limit, offset, filter)
+	submissions, err := s.submissionRepo.ListSubmissionsByTemplate(ctx, templateID, limit, offset, filter)
 	if err != nil {
 		log.Error(
 			"failed to list submissions",
@@ -830,7 +730,7 @@ func (s *assignmentService) ListStudentAssignments(
 		return nil, "", fmt.Errorf("%w", err)
 	}
 
-	items, err := s.submissionProvider.ListByStudentID(ctx, studentID, limit, offset, statusFilter)
+	items, err := s.submissionRepo.ListAssignmentsForStudent(ctx, studentID, limit, offset, statusFilter)
 	if err != nil {
 		log.Error(
 			"failed to list assignments for student",
@@ -862,7 +762,7 @@ func (s *assignmentService) GetSubmissionDetails(
 	const op = "services.assignment.GetSubmissionDetails"
 	log := s.log.With(slog.String("op", op))
 
-	sub, err := s.submissionProvider.ByID(ctx, submissionID)
+	sub, err := s.submissionRepo.GetSubmissionByID(ctx, submissionID)
 	if err != nil {
 		log.Error(
 			"failed to get submission",
@@ -873,15 +773,15 @@ func (s *assignmentService) GetSubmissionDetails(
 
 	type templateResult struct {
 		tmpl    *models.AssignmentTemplate
-		targets []*models.AssignmentTarget
+		targets []models.AssignmentTarget
 		err     error
 	}
 	type versionsResult struct {
-		versions []*models.SubmissionVersion
+		versions []models.SubmissionVersion
 		err      error
 	}
 	type feedbacksResult struct {
-		feedbacks []*models.Feedback
+		feedbacks []models.Feedback
 		err       error
 	}
 
@@ -890,17 +790,17 @@ func (s *assignmentService) GetSubmissionDetails(
 	feedbacksCh := make(chan feedbacksResult, 1)
 
 	go func() {
-		tmpl, targets, err := s.assignmentProvider.ByID(ctx, sub.TemplateID)
+		tmpl, targets, err := s.assignmentRepo.GetAssignmentByID(ctx, sub.TemplateID)
 		tmplCh <- templateResult{tmpl, targets, err}
 	}()
 
 	go func() {
-		versions, err := s.submissionProvider.VersionsBySubmissionID(ctx, submissionID)
+		versions, err := s.submissionRepo.GetSubmissionVersions(ctx, submissionID)
 		versionsCh <- versionsResult{versions, err}
 	}()
 
 	go func() {
-		feedbacks, err := s.feedbackProvider.BySubmissionID(ctx, submissionID)
+		feedbacks, err := s.feedbackRepo.GetFeedbacksBySubmission(ctx, submissionID)
 		feedbacksCh <- feedbacksResult{feedbacks, err}
 	}()
 
@@ -932,7 +832,7 @@ func (s *assignmentService) GetSubmissionDetails(
 	}
 
 	dto := &dto.FullSubmission{
-		Template:   tmplRes.tmpl,
+		Assignment: tmplRes.tmpl,
 		Targets:    tmplRes.targets,
 		Submission: sub,
 		Versions:   versionsRes.versions,
@@ -958,7 +858,7 @@ func (s *assignmentService) ProvideFeedback(
 	const op = "services.assignment.ProvideFeedback"
 	log := s.log.With(slog.String("op", op))
 
-	sub, err := s.submissionProvider.ByID(ctx, dto.SubmissionID)
+	sub, err := s.submissionRepo.GetSubmissionByID(ctx, dto.SubmissionID)
 	if err != nil {
 		log.Error(
 			"failed to get submission",
@@ -978,7 +878,7 @@ func (s *assignmentService) ProvideFeedback(
 		return fmt.Errorf("%w", domain.ErrSubmissionNotSubmitted)
 	}
 
-	tmpl, _, err := s.assignmentProvider.ByID(ctx, sub.TemplateID)
+	tmpl, _, err := s.assignmentRepo.GetAssignmentByID(ctx, sub.TemplateID)
 	if err != nil {
 		log.Error(
 			"failed to get assignment template",
@@ -1004,7 +904,7 @@ func (s *assignmentService) ProvideFeedback(
 		return fmt.Errorf("%w", err)
 	}
 
-	feedback := &models.Feedback{
+	feedback := models.Feedback{
 		ID:          id,
 		VersionID:   dto.VersionID,
 		GraderID:    graderID,
@@ -1020,7 +920,7 @@ func (s *assignmentService) ProvideFeedback(
 		newStatus = &status
 	}
 
-	if err := s.feedbackSaver.CreateFeedback(ctx, feedback, newStatus); err != nil {
+	if err := s.feedbackRepo.CreateFeedback(ctx, feedback, newStatus); err != nil {
 		log.Error(
 			"failed to create feedback",
 			"submission_id", dto.SubmissionID.String(),

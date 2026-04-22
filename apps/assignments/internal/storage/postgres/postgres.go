@@ -4,17 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage"
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres/assignment"
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres/submission"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres/repo/assignment"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres/repo/feedback"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/storage/postgres/repo/submission"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Storage struct {
 	pool *pgxpool.Pool
-	storage.AssignmentStorage
-	storage.SubmissionStorage
+	*assignment.AssignmentRepo
+	*submission.SubmissionRepo
+	*feedback.FeedbackRepo
 }
 
 func New(connString string) (*Storage, error) {
@@ -36,9 +37,10 @@ func New(connString string) (*Storage, error) {
 	}
 
 	return &Storage{
-		pool:              pool,
-		AssignmentStorage: assignment.New(pool),
-		SubmissionStorage: submission.New(pool),
+		pool:           pool,
+		AssignmentRepo: assignment.New(pool),
+		SubmissionRepo: submission.New(pool),
+		FeedbackRepo:   feedback.New(pool),
 	}, nil
 }
 

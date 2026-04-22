@@ -16,6 +16,7 @@ type Submission struct {
 	Status      domain.SubmissionStatus `db:"status"`
 	StartedAt   time.Time               `db:"started_at"`
 	SubmittedAt *time.Time              `db:"submitted_at"`
+	LastVersion *SubmissionVersionLight
 }
 
 type SubmissionVersion struct {
@@ -29,7 +30,9 @@ type SubmissionVersion struct {
 	UpdatedAt        time.Time       `db:"updated_at"`
 }
 
-type SubmissionItem struct {
-	Submission        *Submission
-	SubmissionVersion *SubmissionVersion
+type SubmissionVersionLight struct {
+	ID            *uuid.UUID
+	VersionNumber *int32
+	Payload       json.RawMessage
+	CreatedAt     *time.Time
 }
