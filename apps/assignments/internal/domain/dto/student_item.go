@@ -11,7 +11,6 @@ import (
 type StudentItem struct {
 	AssignmentID uuid.UUID
 	Title        string
-	Description  string
 	WidgetType   string
 	DueDate      *time.Time
 	CreatedAt    time.Time
