@@ -30,7 +30,7 @@ type AssignmentRepo interface {
 		ctx context.Context,
 		id uuid.UUID,
 	) (*models.AssignmentTemplate, []models.AssignmentTarget, error)
-	ListAssignmentsByCreator(
+	ListTemplatesByCreator(
 		ctx context.Context,
 		creatorID uuid.UUID,
 		limit int,

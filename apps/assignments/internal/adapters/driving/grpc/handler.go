@@ -7,7 +7,7 @@ import (
 
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/core/domain"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/core/domain/dto"
-	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/core/domain/models"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/ports/driving"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/pkg/auth"
 
 	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
@@ -19,102 +19,23 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type Assignments interface {
-	Create(
-		ctx context.Context,
-		creatorID uuid.UUID,
-		dto dto.CreateAssignment,
-	) (uuid.UUID, error)
-	Update(
-		ctx context.Context,
-		callerID uuid.UUID,
-		assignmentID uuid.UUID,
-		updates map[string]any,
-		targets []dto.Target,
-	) (*models.AssignmentTemplate, error)
-	Delete(
-		ctx context.Context,
-		assignmentID uuid.UUID,
-	) error
-	GetByID(
-		ctx context.Context,
-		assignmentID uuid.UUID,
-	) (
-		*models.AssignmentTemplate,
-		[]dto.Target,
-		error,
-	)
-	List(
-		ctx context.Context,
-		callerID uuid.UUID,
-		limit int,
-		pageToken string,
-	) ([]models.AssignmentTemplateLight, string, error)
-	ListByStudentID(
-		ctx context.Context,
-		studentID uuid.UUID,
-		limit int32,
-		pageToken string,
-		statusFilter domain.SubmissionStatus,
-	) ([]dto.StudentItem, string, error)
-	Start(
-		ctx context.Context,
-		studentID uuid.UUID,
-		templateID uuid.UUID,
-	) (uuid.UUID, time.Time, error)
-	SaveDraft(
-		ctx context.Context,
-		studentID uuid.UUID,
-		dto dto.SaveVersion,
-	) (uuid.UUID, error)
-	Submit(
-		ctx context.Context,
-		studentID uuid.UUID,
-		dto dto.SaveVersion,
-	) (uuid.UUID, domain.SubmissionStatus, error)
-}
-
-type Submissions interface {
-	ListByTemplateID(
-		ctx context.Context,
-		templateID uuid.UUID,
-		limit int,
-		pageToken string,
-		filter domain.SubmissionStatus,
-	) ([]models.Submission, string, error)
-	GetDetails(
-		ctx context.Context,
-		submissionID uuid.UUID,
-	) (
-		*dto.FullSubmission,
-		error,
-	)
-}
-
-type Feedbacks interface {
-	Provide(
-		ctx context.Context,
-		graderID uuid.UUID,
-		dto dto.Feedback,
-	) error
-}
-
 type serverAPI struct {
 	tasksv1.UnimplementedTasksServiceServer
-	assignments Assignments
-	submissions Submissions
-	feedbacks   Feedbacks
+	assignments driving.AssignmentService
+	submissions driving.SubmissionService
+	feedbacks   driving.FeedbackService
 }
 
 func Register(
 	gRPC *grpc.Server,
-	assignments Assignments,
-	submissions Submissions,
-	feedbacks Feedbacks,
+	assignments driving.AssignmentService,
+	submissions driving.SubmissionService,
+	feedbacks driving.FeedbackService,
 ) {
 	tasksv1.RegisterTasksServiceServer(gRPC, &serverAPI{
 		assignments: assignments,
 		submissions: submissions,
+		feedbacks:   feedbacks,
 	})
 }
 
@@ -164,7 +85,7 @@ func (s *serverAPI) CreateAssignment(
 		Targets:      targets,
 	}
 
-	assignmentID, err := s.assignments.Create(
+	assignmentID, err := s.assignments.CreateTemplate(
 		ctx,
 		userID,
 		assignmentDTO,
@@ -252,7 +173,9 @@ func (s *serverAPI) UpdateAssignment(
 		)
 	}
 
-	updateModel, err := s.assignments.Update(ctx, userID, assignmentID, updates, targets)
+	updateModel, err := s.assignments.UpdateTemplate(
+		ctx, userID, assignmentID, updates, targets,
+	)
 	if err != nil {
 		return nil, status.Error(
 			codes.Internal,
@@ -315,6 +238,16 @@ func (s *serverAPI) DeleteAssignment(
 	ctx context.Context,
 	req *tasksv1.DeleteAssignmentRequest,
 ) (*tasksv1.DeleteAssignmentResponse, error) {
+	userIDStr, err := auth.GetUserID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "failed parse uuid")
+	}
+
 	userRole := auth.GetUserRole(ctx)
 
 	if userRole != auth.RoleTeacher && userRole != auth.RoleAdmin {
@@ -332,7 +265,7 @@ func (s *serverAPI) DeleteAssignment(
 		)
 	}
 
-	err = s.assignments.Delete(ctx, assignmentID)
+	err = s.assignments.DeleteTemplate(ctx, userID, assignmentID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Error(
@@ -368,7 +301,7 @@ func (s *serverAPI) GetAssignment(
 		)
 	}
 
-	assignment, targets, err := s.assignments.GetByID(ctx, assignmentID)
+	assignment, targets, err := s.assignments.GetTemplate(ctx, assignmentID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Error(
@@ -404,7 +337,7 @@ func (s *serverAPI) GetAssignment(
 
 	targetsProto := make([]*tasksv1.AssignmentTarget, 0, len(targets))
 	for _, target := range targets {
-		var targetProto *tasksv1.AssignmentTarget
+		var targetProto tasksv1.AssignmentTarget
 		if target.GroupID != nil {
 			targetProto.Target = &tasksv1.AssignmentTarget_GroupId{
 				GroupId: target.GroupID.String(),
@@ -416,7 +349,7 @@ func (s *serverAPI) GetAssignment(
 		} else {
 			continue
 		}
-		targetsProto = append(targetsProto, targetProto)
+		targetsProto = append(targetsProto, &targetProto)
 	}
 
 	return &tasksv1.GetAssignmentResponse{
@@ -463,7 +396,9 @@ func (s *serverAPI) ListAssignments(
 		limit = domain.DefaultPageSizeLimit
 	}
 
-	assignments, token, err := s.assignments.List(ctx, targetID, int(limit), req.PageToken)
+	assignments, token, err := s.assignments.ListTemplates(
+		ctx, targetID, int(limit), req.PageToken,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to list assignments")
 	}
@@ -504,7 +439,7 @@ func (s *serverAPI) ListAssignmentSubmissions(
 
 	submissionStatus := convertProtoStatus(req.GetStatusFilter())
 
-	submissions, token, err := s.submissions.ListByTemplateID(
+	submissions, token, err := s.feedbacks.ListSubmissions(
 		ctx, templateID, int(limit), req.PageToken, submissionStatus,
 	)
 	if err != nil {
@@ -554,7 +489,7 @@ func (s *serverAPI) GetStudentSubmission(
 		)
 	}
 
-	details, err := s.submissions.GetDetails(ctx, submissionID)
+	details, err := s.feedbacks.GetSubmissionDetails(ctx, submissionID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Error(
@@ -696,7 +631,7 @@ func (s *serverAPI) ProvideFeedback(
 		IsPublished:  req.GetIsPublished(),
 	}
 
-	err = s.feedbacks.Provide(
+	err = s.feedbacks.ProvideFeedback(
 		ctx,
 		userID,
 		dto,
@@ -744,10 +679,10 @@ func (s *serverAPI) ListMyAssignments(
 
 	statusFilter := convertProtoStatus(req.GetStatusFilter())
 
-	assignments, token, err := s.assignments.ListByStudentID(
+	assignments, token, err := s.submissions.ListStudentAssignments(
 		ctx,
 		userID,
-		limit,
+		int(limit),
 		req.GetPageToken(),
 		statusFilter,
 	)
@@ -810,7 +745,7 @@ func (s *serverAPI) StartAssignment(
 		)
 	}
 
-	submissionID, startedAt, err := s.assignments.Start(
+	submissionID, startedAt, err := s.submissions.StartAssignment(
 		ctx,
 		userID,
 		templateID,
@@ -872,7 +807,7 @@ func (s *serverAPI) SaveAssignmentDraft(
 		TimeSpent:    req.GetTimeSpent().AsDuration(),
 	}
 
-	submissionVersionID, err := s.assignments.SaveDraft(
+	submissionVersionID, err := s.submissions.SaveDraft(
 		ctx,
 		userID,
 		saveVersion,
@@ -934,7 +869,7 @@ func (s *serverAPI) SubmitAssignment(
 		TimeSpent:    req.GetTimeSpent().AsDuration(),
 	}
 
-	submissionID, submissionStatus, err := s.assignments.Submit(
+	submissionID, submissionStatus, err := s.submissions.SubmitAssignment(
 		ctx,
 		userID,
 		saveVersion,

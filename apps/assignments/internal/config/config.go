@@ -9,27 +9,28 @@ import (
 )
 
 type Config struct {
-	Env      string   `yaml:"env" env-default:"local"`
-	Database Database `yaml:"database"`
-	TokenTTL time.Duration
+	Env      string     `yaml:"env" env-default:"local"`
+	Version  string     `yaml:"version" env-default:"v0.0.1"`
+	Database Database   `yaml:"database"`
 	GRPC     GRPCConfig `yaml:"grpc"`
 }
 
 type GRPCConfig struct {
 	Port    int           `yaml:"port"`
 	Timeout time.Duration `yaml:"timeout"`
+	JWKSURL string        `yaml:"jwks_url" env-required:"true"`
 }
 
 type Database struct {
-	Host     string `yaml:"host" env-required:"true"`
-	Port     int    `yaml:"port" env-required:"true"`
-	User     string `yaml:"user" env-required:"true"`
-	Password string `yaml:"password" env-required:"true"`
-	Name     string `yaml:"name" env-required:"true"`
+	Host     string `yaml:"host" env:"DB_HOST" env-required:"true"`
+	Port     int    `yaml:"port" env:"DB_PORT" env-required:"true"`
+	User     string `yaml:"user" env:"DB_USER" env-required:"true"`
+	Password string `yaml:"-" env:"DB_PASSWORD" env-required:"true"`
+	Name     string `yaml:"name" env:"DB_NAME" env-required:"true"`
 	SSLMode  string `yaml:"sslmode" env-default:"disable"`
 }
 
-// MustLoad retrive path to config
+// MustLoad retrieve path to config
 // if there is no config path provided, it will panic.
 func MustLoad() *Config {
 	path := fetchConfigPath()

@@ -28,7 +28,7 @@ func New(pool *pgxpool.Pool) AssignmentRepo {
 func (r *AssignmentRepo) CreateAssignment(
 	ctx context.Context,
 	tmpl models.AssignmentTemplate,
-	targets []*models.AssignmentTarget,
+	targets []models.AssignmentTarget,
 ) error {
 	const op = "storage.postgres.assignment.CreateAssignment"
 

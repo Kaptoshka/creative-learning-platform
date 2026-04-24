@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type AssignmentTemplateService interface {
+type AssignmentService interface {
 	CreateTemplate(
 		ctx context.Context,
 		creatorID uuid.UUID,
@@ -45,7 +45,6 @@ type SubmissionService interface {
 	ListStudentAssignments(
 		ctx context.Context,
 		studentID uuid.UUID,
-		groupID uuid.UUID,
 		limit int,
 		pageToken string,
 		statusFilter domain.SubmissionStatus,

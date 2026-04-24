@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/adapters/driven/postgres"
@@ -11,26 +12,56 @@ import (
 )
 
 type App struct {
-	GRPCServer *grpcapp.App
+	GRPCServer     *grpcapp.App
+	postgresClient *postgres.Storage
 }
 
 func New(
 	log *slog.Logger,
 	grpcPort int,
+	jwksURL string,
 	connString string,
-) *App {
+) (*App, error) {
 	client, err := postgres.New(connString)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("failed to connect to storage: %w", err)
 	}
 
-	assignmentService := assignment.New(log, client.AssignmentRepo, client.SubmissionRepo, client.FeedbackRepo)
-	submissionService := submission.New(log, client.AssignmentRepo, client.SubmissionRepo, client.FeedbackRepo)
-	feedbackService := feedback.New(log, client.AssignmentRepo, client.SubmissionRepo, client.FeedbackRepo)
+	assignmentService := assignment.New(
+		log,
+		&client.AssignmentRepo,
+		&client.SubmissionRepo,
+		&client.FeedbackRepo,
+	)
+	submissionService := submission.New(
+		log,
+		&client.AssignmentRepo,
+		&client.SubmissionRepo,
+		&client.FeedbackRepo,
+	)
+	feedbackService := feedback.New(
+		log,
+		&client.AssignmentRepo,
+		&client.SubmissionRepo,
+		&client.FeedbackRepo,
+	)
 
-	grpcApp := grpcapp.New(log, assignmentService, submissionService, feedbackService, grpcPort)
+	grpcApp, err := grpcapp.New(
+		log,
+		assignmentService,
+		submissionService,
+		feedbackService,
+		grpcPort,
+		jwksURL,
+	)
 
 	return &App{
-		GRPCServer: grpcApp,
-	}
+		GRPCServer:     grpcApp,
+		postgresClient: client,
+	}, nil
+}
+
+func (a *App) Stop() {
+	a.GRPCServer.Stop()
+	a.postgresClient.Close()
 }

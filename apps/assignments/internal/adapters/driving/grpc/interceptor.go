@@ -7,7 +7,8 @@ import (
 
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/pkg/auth"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/MicahParks/keyfunc/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -16,11 +17,15 @@ import (
 )
 
 type AuthInterceptor struct {
-	jwtSecret string
+	jwks keyfunc.Keyfunc
 }
 
-func NewAuthInterceptor(jwtSecret string) *AuthInterceptor {
-	return &AuthInterceptor{jwtSecret: jwtSecret}
+func NewAuthInterceptor(jwksURL string) (*AuthInterceptor, error) {
+	jwks, err := keyfunc.NewDefaultCtx(context.Background(), []string{jwksURL})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
+	}
+	return &AuthInterceptor{jwks: jwks}, nil
 }
 
 func (a *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
@@ -66,12 +71,9 @@ func (a *AuthInterceptor) parseToken(ctx context.Context) (*Claims, error) {
 	}
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(a.jwtSecret), nil
-	})
+	token, err := jwt.Parse(tokenString, a.jwks.Keyfunc,
+		jwt.WithValidMethods([]string{"RS256"}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
@@ -81,12 +83,7 @@ func (a *AuthInterceptor) parseToken(ctx context.Context) (*Claims, error) {
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
-	claims, err := mapToClaims(mapClaims)
-	if err != nil {
-		return nil, fmt.Errorf("map claims: %w", err)
-	}
-
-	return claims, nil
+	return mapToClaims(mapClaims)
 }
 
 func mapToClaims(mc jwt.MapClaims) (*Claims, error) {

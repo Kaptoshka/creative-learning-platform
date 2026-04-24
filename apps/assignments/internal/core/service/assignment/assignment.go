@@ -37,7 +37,7 @@ func New(
 	}
 }
 
-func (s *assignmentService) Create(
+func (s *assignmentService) CreateTemplate(
 	ctx context.Context,
 	creatorID uuid.UUID,
 	dto dto.CreateAssignment,
@@ -126,7 +126,7 @@ func validateCreateTemplateDTO(dto dto.CreateAssignment) error {
 	return nil
 }
 
-func (s *assignmentService) Update(
+func (s *assignmentService) UpdateTemplate(
 	ctx context.Context,
 	callerID uuid.UUID,
 	id uuid.UUID,
@@ -278,7 +278,7 @@ func convertTargets(
 	return result
 }
 
-func (s *assignmentService) DeleteAssignment(
+func (s *assignmentService) DeleteTemplate(
 	ctx context.Context,
 	callerID uuid.UUID,
 	id uuid.UUID,
@@ -361,7 +361,7 @@ func (s *assignmentService) GetTemplate(
 	return tmpl, targets, nil
 }
 
-func (s *assignmentService) List(
+func (s *assignmentService) ListTemplates(
 	ctx context.Context,
 	callerID uuid.UUID,
 	limit int,
@@ -384,7 +384,7 @@ func (s *assignmentService) List(
 
 	limit = shared.NormalizeLimit(limit)
 
-	templates, err := s.assignmentRepo.ListAssignmentsByCreator(
+	templates, err := s.assignmentRepo.ListTemplatesByCreator(
 		ctx, creatorID, limit, offset,
 	)
 	if err != nil {
