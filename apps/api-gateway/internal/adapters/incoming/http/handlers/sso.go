@@ -16,6 +16,16 @@ func NewSSOHandler(uc outgoing.SSOService) *SSOHandler {
 	return &SSOHandler{uc: uc}
 }
 
+// @Summary Register a new user
+// @Description Creates a new user account with email, password and personal information
+// @Tags SSO
+// @Accept json
+// @Produce json
+// @Param request body domain.RegisterRequest true "Registration details"
+// @Success 201 {object} domain.RegisterResponse
+// @Failure 400 {object} domain.Error
+// @Failure 409 {object} domain.Error
+// @Router /sso/register [post]
 func (h *SSOHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req domain.RegisterRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -32,6 +42,16 @@ func (h *SSOHandler) Register(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, res)
 }
 
+// @Summary Login user
+// @Description Authenticates user with email and password, returns access token
+// @Tags SSO
+// @Accept json
+// @Produce json
+// @Param request body domain.LoginRequest true "Login credentials"
+// @Success 200 {object} domain.LoginResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Router /sso/login [post]
 func (h *SSOHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req domain.LoginRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -48,6 +68,15 @@ func (h *SSOHandler) Login(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, res)
 }
 
+// @Summary Logout user
+// @Description Invalidates the user session token
+// @Tags SSO
+// @Accept json
+// @Produce json
+// @Param request body domain.LogoutRequest true "Logout request with token"
+// @Success 200 {object} domain.LogoutResponse
+// @Failure 400 {object} domain.Error
+// @Router /sso/logout [post]
 func (h *SSOHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req domain.LogoutRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {

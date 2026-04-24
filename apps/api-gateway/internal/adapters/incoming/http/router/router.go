@@ -5,6 +5,8 @@ import (
 
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/middleware"
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/ports/incoming"
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func New(
@@ -28,7 +30,7 @@ func New(
 		mw.Public(http.HandlerFunc(sso.Logout)),
 	)
 
-	// --- Tasks: Teacher — template management ---
+	// --- Assignments: Teacher — template management ---
 	mux.Handle(
 		"GET /api/v1/assignments",
 		mw.Protected(http.HandlerFunc(assignments.ListAssignments)),
@@ -50,7 +52,7 @@ func New(
 		mw.Protected(http.HandlerFunc(assignments.DeleteAssignment)),
 	)
 
-	// --- Tasks: Teacher — submissions & feedback ---
+	// --- Assignments: Teacher — submissions & feedback ---
 	mux.Handle(
 		"GET /api/v1/assignments/{template_id}/submissions",
 		mw.Protected(http.HandlerFunc(assignments.ListAssignmentSubmissions)),
@@ -64,7 +66,7 @@ func New(
 		mw.Protected(http.HandlerFunc(assignments.ProvideFeedback)),
 	)
 
-	// --- Tasks: Student — assignment workflow ---
+	// --- Assignments: Student — assignment workflow ---
 	mux.Handle(
 		"GET /api/v1/my/assignments",
 		mw.Protected(http.HandlerFunc(assignments.ListMyAssignments)),
@@ -80,6 +82,12 @@ func New(
 	mux.Handle(
 		"POST /api/v1/my/submissions/{submission_id}/submit",
 		mw.Protected(http.HandlerFunc(assignments.SubmitAssignment)),
+	)
+
+	// --- Swagger UI ---
+	mux.Handle(
+		"/api/v1/swagger/",
+		mw.Protected(httpSwagger.WrapHandler),
 	)
 
 	return mux
