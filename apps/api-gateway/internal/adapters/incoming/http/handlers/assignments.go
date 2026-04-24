@@ -3,17 +3,17 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/httputil"
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/middleware"
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	httputil "github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/utils"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/ports/outgoing"
 )
 
 type AssignmentsHandler struct {
-	uc outgoing.AssignmentsService
+	uc outgoing.AssignmentService
 }
 
-func NewAssignmentsHandler(uc outgoing.AssignmentsService) *AssignmentsHandler {
+func NewAssignmentsHandler(uc outgoing.AssignmentService) *AssignmentsHandler {
 	return &AssignmentsHandler{uc: uc}
 }
 

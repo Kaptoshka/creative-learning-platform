@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
-	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/sso/v1"
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
+	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/sso/v1"
 )
 
 type SSOAdapter struct {
@@ -15,7 +15,10 @@ func NewSSOAdapter(client ssov1.AuthServiceClient) *SSOAdapter {
 	return &SSOAdapter{client: client}
 }
 
-func (a *SSOAdapter) Register(ctx context.Context, req domain.RegisterRequest) (domain.RegisterResponse, error) {
+func (a *SSOAdapter) Register(
+	ctx context.Context,
+	req domain.RegisterRequest,
+) (domain.RegisterResponse, error) {
 	res, err := a.client.Register(ctx, &ssov1.RegisterRequest{
 		Email:      req.Email,
 		Password:   req.Password,
@@ -30,7 +33,10 @@ func (a *SSOAdapter) Register(ctx context.Context, req domain.RegisterRequest) (
 	return domain.RegisterResponse{UserID: res.UserId}, nil
 }
 
-func (a *SSOAdapter) Login(ctx context.Context, req domain.LoginRequest) (domain.LoginResponse, error) {
+func (a *SSOAdapter) Login(
+	ctx context.Context,
+	req domain.LoginRequest,
+) (domain.LoginResponse, error) {
 	res, err := a.client.Login(ctx, &ssov1.LoginRequest{
 		Email:    req.Email,
 		Password: req.Password,
@@ -43,7 +49,10 @@ func (a *SSOAdapter) Login(ctx context.Context, req domain.LoginRequest) (domain
 	return domain.LoginResponse{Token: res.Token}, nil
 }
 
-func (a *SSOAdapter) Logout(ctx context.Context, req domain.LogoutRequest) (domain.LogoutResponse, error) {
+func (a *SSOAdapter) Logout(
+	ctx context.Context,
+	req domain.LogoutRequest,
+) (domain.LogoutResponse, error) {
 	res, err := a.client.Logout(ctx, &ssov1.LogoutRequest{
 		Token: req.Token,
 	})

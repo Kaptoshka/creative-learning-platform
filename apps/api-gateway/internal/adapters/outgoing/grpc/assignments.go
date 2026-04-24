@@ -3,17 +3,17 @@ package grpc
 import (
 	"context"
 
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
-	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
+	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/assignments/v1"
 
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 type AssignmentsAdapter struct {
-	client tasksv1.AssignmentsServiceClient
+	client assignmentsv1.AssignmentServiceClient
 }
 
-func NewAssignmentsAdapter(client tasksv1.AssignmentsServiceClient) *AssignmentsAdapter {
+func NewAssignmentsAdapter(client assignmentsv1.AssignmentServiceClient) *AssignmentsAdapter {
 	return &AssignmentsAdapter{client: client}
 }
 
@@ -23,7 +23,7 @@ func (a *AssignmentsAdapter) CreateAssignment(
 	ctx context.Context,
 	req domain.CreateAssignmentRequest,
 ) (domain.CreateAssignmentResponse, error) {
-	res, err := a.client.CreateAssignment(ctx, &tasksv1.CreateAssignmentRequest{
+	res, err := a.client.CreateAssignment(ctx, &assignmentsv1.CreateAssignmentRequest{
 		Title:        req.Title,
 		Description:  req.Description,
 		WidgetId:     req.WidgetID,
@@ -42,9 +42,9 @@ func (a *AssignmentsAdapter) UpdateAssignment(
 	ctx context.Context,
 	req domain.UpdateAssignmentRequest,
 ) (domain.UpdateAssignmentResponse, error) {
-	res, err := a.client.UpdateAssignment(ctx, &tasksv1.UpdateAssignmentRequest{
+	res, err := a.client.UpdateAssignment(ctx, &assignmentsv1.UpdateAssignmentRequest{
 		AssignmentId: req.AssignmentID,
-		Template: &tasksv1.AssignmentTemplate{
+		Template: &assignmentsv1.AssignmentTemplate{
 			Id:           req.Template.ID,
 			Title:        req.Template.Title,
 			Description:  req.Template.Description,
@@ -68,7 +68,7 @@ func (a *AssignmentsAdapter) DeleteAssignment(
 	ctx context.Context,
 	req domain.DeleteAssignmentRequest,
 ) error {
-	_, err := a.client.DeleteAssignment(ctx, &tasksv1.DeleteAssignmentRequest{
+	_, err := a.client.DeleteAssignment(ctx, &assignmentsv1.DeleteAssignmentRequest{
 		Id: req.ID,
 	})
 	return mapGRPCError(err)
@@ -78,7 +78,7 @@ func (a *AssignmentsAdapter) GetAssignment(
 	ctx context.Context,
 	req domain.GetAssignmentRequest,
 ) (domain.GetAssignmentResponse, error) {
-	res, err := a.client.GetAssignment(ctx, &tasksv1.GetAssignmentRequest{
+	res, err := a.client.GetAssignment(ctx, &assignmentsv1.GetAssignmentRequest{
 		Id: req.ID,
 	})
 	if err != nil {
@@ -97,7 +97,7 @@ func (a *AssignmentsAdapter) ListAssignments(
 	ctx context.Context,
 	req domain.ListAssignmentsRequest,
 ) (domain.ListAssignmentsResponse, error) {
-	res, err := a.client.ListAssignments(ctx, &tasksv1.ListAssignmentsRequest{
+	res, err := a.client.ListAssignments(ctx, &assignmentsv1.ListAssignmentsRequest{
 		PageSize:  req.PageSize,
 		PageToken: req.PageToken,
 		CreatorId: req.CreatorID,
@@ -121,7 +121,7 @@ func (a *AssignmentsAdapter) ListAssignmentSubmissions(
 	ctx context.Context,
 	req domain.ListAssignmentSubmissionsRequest,
 ) (domain.ListAssignmentSubmissionsResponse, error) {
-	res, err := a.client.ListAssignmentSubmissions(ctx, &tasksv1.ListAssignmentSubmissionsRequest{
+	res, err := a.client.ListAssignmentSubmissions(ctx, &assignmentsv1.ListAssignmentSubmissionsRequest{
 		TemplateId:   req.TemplateID,
 		PageSize:     req.PageSize,
 		PageToken:    req.PageToken,
@@ -140,7 +140,7 @@ func (a *AssignmentsAdapter) ListAssignmentSubmissions(
 func (a *AssignmentsAdapter) GetStudentSubmission(
 	ctx context.Context, req domain.GetStudentSubmissionRequest,
 ) (domain.GetStudentSubmissionResponse, error) {
-	res, err := a.client.GetStudentSubmission(ctx, &tasksv1.GetStudentSubmissionRequest{
+	res, err := a.client.GetStudentSubmission(ctx, &assignmentsv1.GetStudentSubmissionRequest{
 		SubmissionId: req.SubmissionID,
 	})
 	if err != nil {
@@ -159,7 +159,7 @@ func (a *AssignmentsAdapter) ProvideFeedback(
 	ctx context.Context,
 	req domain.ProvideFeedbackRequest,
 ) error {
-	_, err := a.client.ProvideFeedback(ctx, &tasksv1.ProvideFeedbackRequest{
+	_, err := a.client.ProvideFeedback(ctx, &assignmentsv1.ProvideFeedbackRequest{
 		SubmissionId: req.SubmissionID,
 		VersionId:    req.VersionID,
 		TextContent:  req.TextContent,
@@ -175,7 +175,7 @@ func (a *AssignmentsAdapter) ListMyAssignments(
 	ctx context.Context,
 	req domain.ListMyAssignmentsRequest,
 ) (domain.ListMyAssignmentsResponse, error) {
-	res, err := a.client.ListMyAssignments(ctx, &tasksv1.ListMyAssignmentsRequest{
+	res, err := a.client.ListMyAssignments(ctx, &assignmentsv1.ListMyAssignmentsRequest{
 		PageSize:     req.PageSize,
 		PageToken:    req.PageToken,
 		StatusFilter: statusToProto(req.StatusFilter),
@@ -203,7 +203,7 @@ func (a *AssignmentsAdapter) StartAssignment(
 	ctx context.Context,
 	req domain.StartAssignmentRequest,
 ) (domain.StartAssignmentResponse, error) {
-	res, err := a.client.StartAssignment(ctx, &tasksv1.StartAssignmentRequest{
+	res, err := a.client.StartAssignment(ctx, &assignmentsv1.StartAssignmentRequest{
 		TemplateId: req.TemplateID,
 	})
 	if err != nil {
@@ -220,7 +220,7 @@ func (a *AssignmentsAdapter) SaveAssignmentDraft(
 	ctx context.Context,
 	req domain.SaveAssignmentDraftRequest,
 ) (domain.SaveAssignmentDraftResponse, error) {
-	res, err := a.client.SaveAssignmentDraft(ctx, &tasksv1.SaveAssignmentDraftRequest{
+	res, err := a.client.SaveAssignmentDraft(ctx, &assignmentsv1.SaveAssignmentDraftRequest{
 		SubmissionId: req.SubmissionID,
 		Payload:      mapToProto(req.Payload),
 		TimeSpent:    durationToProto(req.TimeSpent),
@@ -239,7 +239,7 @@ func (a *AssignmentsAdapter) SubmitAssignment(
 	ctx context.Context,
 	req domain.SubmitAssignmentRequest,
 ) (domain.SubmitAssignmentResponse, error) {
-	res, err := a.client.SubmitAssignment(ctx, &tasksv1.SubmitAssignmentRequest{
+	res, err := a.client.SubmitAssignment(ctx, &assignmentsv1.SubmitAssignmentRequest{
 		SubmissionId: req.SubmissionID,
 		Payload:      mapToProto(req.Payload),
 		TimeSpent:    durationToProto(req.TimeSpent),

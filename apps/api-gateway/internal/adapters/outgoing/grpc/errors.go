@@ -1,7 +1,7 @@
 package grpc
 
 import (
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

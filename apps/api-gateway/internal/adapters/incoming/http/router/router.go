@@ -9,7 +9,7 @@ import (
 
 func New(
 	sso incoming.SSOHandler,
-	assignments incoming.AssignmentsHandler,
+	assignments incoming.AssignmentHandler,
 	mw *middleware.Middleware,
 ) http.Handler {
 	mux := http.NewServeMux()

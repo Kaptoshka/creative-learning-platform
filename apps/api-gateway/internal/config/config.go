@@ -13,6 +13,7 @@ type Config struct {
 	Version    string     `yaml:"version" env-default:"v0.0.1"`
 	HTTPServer HTTPServer `yaml:"http_server"`
 	Clients    Clients    `yaml:"clients"`
+	JWKSURL    string     `yaml:"jwks_url" env-required:"true"`
 }
 
 type HTTPServer struct {
@@ -23,7 +24,7 @@ type HTTPServer struct {
 }
 
 type Clients struct {
-	SSO   GRPCClient `yaml:"sso"`
+	SSO         GRPCClient `yaml:"sso"`
 	Assignments GRPCClient `yaml:"assignments"`
 }
 

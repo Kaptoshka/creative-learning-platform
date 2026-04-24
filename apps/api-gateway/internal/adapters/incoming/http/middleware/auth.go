@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/httputil"
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	httputil "github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/utils"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
 )
 
 type contextKey string

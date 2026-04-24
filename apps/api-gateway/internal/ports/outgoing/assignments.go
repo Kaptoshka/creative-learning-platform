@@ -3,14 +3,14 @@ package outgoing
 import (
 	"context"
 
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
 )
 
 type AssignmentService interface {
 	// Teacher: template management
 	CreateAssignment(
 		ctx context.Context,
-		req domain.CreateAssignmentRequest
+		req domain.CreateAssignmentRequest,
 	) (domain.CreateAssignmentResponse, error)
 	UpdateAssignment(
 		ctx context.Context,

@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
 )
 
 type errorResponse struct {

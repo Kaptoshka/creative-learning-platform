@@ -3,7 +3,7 @@ package outgoing
 import (
 	"context"
 
-	"github.com/Kaptoshka/creative-learning-platform/services/gateway/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
 )
 
 type SSOService interface {

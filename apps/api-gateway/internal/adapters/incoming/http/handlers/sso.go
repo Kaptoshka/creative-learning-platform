@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/httputil"
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	httputil "github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/utils"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/ports/outgoing"
 )
 
