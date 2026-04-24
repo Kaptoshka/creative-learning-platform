@@ -10,7 +10,7 @@ import (
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/ports/driving"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/pkg/auth"
 
-	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
+	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/assignments/v1"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -20,7 +20,7 @@ import (
 )
 
 type serverAPI struct {
-	tasksv1.UnimplementedTasksServiceServer
+	assignmentsv1.UnimplementedAssignmentServiceServer
 	assignments driving.AssignmentService
 	submissions driving.SubmissionService
 	feedbacks   driving.FeedbackService
@@ -32,7 +32,7 @@ func Register(
 	submissions driving.SubmissionService,
 	feedbacks driving.FeedbackService,
 ) {
-	tasksv1.RegisterTasksServiceServer(gRPC, &serverAPI{
+	assignmentsv1.RegisterAssignmentServiceServer(gRPC, &serverAPI{
 		assignments: assignments,
 		submissions: submissions,
 		feedbacks:   feedbacks,
@@ -41,8 +41,8 @@ func Register(
 
 func (s *serverAPI) CreateAssignment(
 	ctx context.Context,
-	req *tasksv1.CreateAssignmentRequest,
-) (*tasksv1.CreateAssignmentResponse, error) {
+	req *assignmentsv1.CreateAssignmentRequest,
+) (*assignmentsv1.CreateAssignmentResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
@@ -94,15 +94,15 @@ func (s *serverAPI) CreateAssignment(
 		return nil, status.Error(codes.Internal, "creating assignment error")
 	}
 
-	return &tasksv1.CreateAssignmentResponse{
+	return &assignmentsv1.CreateAssignmentResponse{
 		Id: assignmentID.String(),
 	}, nil
 }
 
 func (s *serverAPI) UpdateAssignment(
 	ctx context.Context,
-	req *tasksv1.UpdateAssignmentRequest,
-) (*tasksv1.UpdateAssignmentResponse, error) {
+	req *assignmentsv1.UpdateAssignmentRequest,
+) (*assignmentsv1.UpdateAssignmentResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(
@@ -188,8 +188,8 @@ func (s *serverAPI) UpdateAssignment(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &tasksv1.UpdateAssignmentResponse{
-		Template: &tasksv1.AssignmentTemplate{
+	return &assignmentsv1.UpdateAssignmentResponse{
+		Template: &assignmentsv1.AssignmentTemplate{
 			Id:           updateModel.ID.String(),
 			CreatorId:    updateModel.CreatorID.String(),
 			Title:        updateModel.Title,
@@ -204,10 +204,10 @@ func (s *serverAPI) UpdateAssignment(
 }
 
 func processTarget(
-	t *tasksv1.AssignmentTarget,
+	t *assignmentsv1.AssignmentTarget,
 ) (dto.Target, error) {
 	switch v := t.GetTarget().(type) {
-	case *tasksv1.AssignmentTarget_GroupId:
+	case *assignmentsv1.AssignmentTarget_GroupId:
 		groupID, err := uuid.Parse(v.GroupId)
 		if err != nil {
 			return dto.Target{}, errors.New("invalid group ID")
@@ -216,7 +216,7 @@ func processTarget(
 		return dto.Target{
 			GroupID: &groupID,
 		}, nil
-	case *tasksv1.AssignmentTarget_StudentId:
+	case *assignmentsv1.AssignmentTarget_StudentId:
 		studentID, err := uuid.Parse(v.StudentId)
 		if err != nil {
 			return dto.Target{}, errors.New("invalid student ID")
@@ -236,8 +236,8 @@ func processTarget(
 
 func (s *serverAPI) DeleteAssignment(
 	ctx context.Context,
-	req *tasksv1.DeleteAssignmentRequest,
-) (*tasksv1.DeleteAssignmentResponse, error) {
+	req *assignmentsv1.DeleteAssignmentRequest,
+) (*assignmentsv1.DeleteAssignmentResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
@@ -277,13 +277,13 @@ func (s *serverAPI) DeleteAssignment(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &tasksv1.DeleteAssignmentResponse{}, nil
+	return &assignmentsv1.DeleteAssignmentResponse{}, nil
 }
 
 func (s *serverAPI) GetAssignment(
 	ctx context.Context,
-	req *tasksv1.GetAssignmentRequest,
-) (*tasksv1.GetAssignmentResponse, error) {
+	req *assignmentsv1.GetAssignmentRequest,
+) (*assignmentsv1.GetAssignmentResponse, error) {
 	userRole := auth.GetUserRole(ctx)
 
 	if userRole != auth.RoleTeacher && userRole != auth.RoleAdmin {
@@ -323,7 +323,7 @@ func (s *serverAPI) GetAssignment(
 		)
 	}
 
-	assignmentProto := &tasksv1.AssignmentTemplate{
+	assignmentProto := &assignmentsv1.AssignmentTemplate{
 		Id:           assignment.ID.String(),
 		CreatorId:    assignment.CreatorID.String(),
 		Title:        assignment.Title,
@@ -335,15 +335,15 @@ func (s *serverAPI) GetAssignment(
 		UpdatedAt:    timestamppb.New(assignment.UpdatedAt),
 	}
 
-	targetsProto := make([]*tasksv1.AssignmentTarget, 0, len(targets))
+	targetsProto := make([]*assignmentsv1.AssignmentTarget, 0, len(targets))
 	for _, target := range targets {
-		var targetProto tasksv1.AssignmentTarget
+		var targetProto assignmentsv1.AssignmentTarget
 		if target.GroupID != nil {
-			targetProto.Target = &tasksv1.AssignmentTarget_GroupId{
+			targetProto.Target = &assignmentsv1.AssignmentTarget_GroupId{
 				GroupId: target.GroupID.String(),
 			}
 		} else if target.StudentID != nil {
-			targetProto.Target = &tasksv1.AssignmentTarget_StudentId{
+			targetProto.Target = &assignmentsv1.AssignmentTarget_StudentId{
 				StudentId: target.StudentID.String(),
 			}
 		} else {
@@ -352,7 +352,7 @@ func (s *serverAPI) GetAssignment(
 		targetsProto = append(targetsProto, &targetProto)
 	}
 
-	return &tasksv1.GetAssignmentResponse{
+	return &assignmentsv1.GetAssignmentResponse{
 		Template: assignmentProto,
 		Targets:  targetsProto,
 	}, nil
@@ -360,8 +360,8 @@ func (s *serverAPI) GetAssignment(
 
 func (s *serverAPI) ListAssignments(
 	ctx context.Context,
-	req *tasksv1.ListAssignmentsRequest,
-) (*tasksv1.ListAssignmentsResponse, error) {
+	req *assignmentsv1.ListAssignmentsRequest,
+) (*assignmentsv1.ListAssignmentsResponse, error) {
 	userIDstr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(
@@ -403,9 +403,9 @@ func (s *serverAPI) ListAssignments(
 		return nil, status.Error(codes.Internal, "failed to list assignments")
 	}
 
-	assignmentsProto := make([]*tasksv1.AssignmentTemplateLight, 0, len(assignments))
+	assignmentsProto := make([]*assignmentsv1.AssignmentTemplateLight, 0, len(assignments))
 	for _, item := range assignments {
-		itemProto := &tasksv1.AssignmentTemplateLight{
+		itemProto := &assignmentsv1.AssignmentTemplateLight{
 			Id:         item.ID.String(),
 			Title:      item.Title,
 			WidgetType: item.WidgetType,
@@ -414,7 +414,7 @@ func (s *serverAPI) ListAssignments(
 		assignmentsProto = append(assignmentsProto, itemProto)
 	}
 
-	return &tasksv1.ListAssignmentsResponse{
+	return &assignmentsv1.ListAssignmentsResponse{
 		Items:         assignmentsProto,
 		NextPageToken: token,
 	}, nil
@@ -422,8 +422,8 @@ func (s *serverAPI) ListAssignments(
 
 func (s *serverAPI) ListAssignmentSubmissions(
 	ctx context.Context,
-	req *tasksv1.ListAssignmentSubmissionsRequest,
-) (*tasksv1.ListAssignmentSubmissionsResponse, error) {
+	req *assignmentsv1.ListAssignmentSubmissionsRequest,
+) (*assignmentsv1.ListAssignmentSubmissionsResponse, error) {
 	templateID, err := uuid.Parse(req.TemplateId)
 	if err != nil {
 		return nil, status.Error(
@@ -449,16 +449,16 @@ func (s *serverAPI) ListAssignmentSubmissions(
 		)
 	}
 
-	submissionsProto := make([]*tasksv1.Submission, 0, len(submissions))
-	var versionProto *tasksv1.SubmissionVersionLight
+	submissionsProto := make([]*assignmentsv1.Submission, 0, len(submissions))
+	var versionProto *assignmentsv1.SubmissionVersionLight
 	for _, sub := range submissions {
-		versionProto = &tasksv1.SubmissionVersionLight{
+		versionProto = &assignmentsv1.SubmissionVersionLight{
 			Id:            sub.LastVersion.ID.String(),
 			VersionNumber: *sub.LastVersion.VersionNumber,
 			CreatedAt:     timestamppb.New(*sub.LastVersion.CreatedAt),
 		}
 
-		itemProto := &tasksv1.Submission{
+		itemProto := &assignmentsv1.Submission{
 			Id:            sub.ID.String(),
 			TemplateId:    sub.TemplateID.String(),
 			StudentId:     sub.StudentID.String(),
@@ -471,7 +471,7 @@ func (s *serverAPI) ListAssignmentSubmissions(
 		submissionsProto = append(submissionsProto, itemProto)
 	}
 
-	return &tasksv1.ListAssignmentSubmissionsResponse{
+	return &assignmentsv1.ListAssignmentSubmissionsResponse{
 		Items:         submissionsProto,
 		NextPageToken: token,
 	}, nil
@@ -479,8 +479,8 @@ func (s *serverAPI) ListAssignmentSubmissions(
 
 func (s *serverAPI) GetStudentSubmission(
 	ctx context.Context,
-	req *tasksv1.GetStudentSubmissionRequest,
-) (*tasksv1.GetStudentSubmissionResponse, error) {
+	req *assignmentsv1.GetStudentSubmissionRequest,
+) (*assignmentsv1.GetStudentSubmissionResponse, error) {
 	submissionID, err := uuid.Parse(req.SubmissionId)
 	if err != nil {
 		return nil, status.Error(
@@ -504,7 +504,7 @@ func (s *serverAPI) GetStudentSubmission(
 		return nil, status.Error(codes.Internal, "failed to parse widget config")
 	}
 
-	templateProto := &tasksv1.AssignmentTemplate{
+	templateProto := &assignmentsv1.AssignmentTemplate{
 		Id:           details.Assignment.ID.String(),
 		CreatorId:    details.Assignment.CreatorID.String(),
 		Title:        details.Assignment.Title,
@@ -521,7 +521,7 @@ func (s *serverAPI) GetStudentSubmission(
 		submittedAtPb = timestamppb.New(*details.Submission.SubmittedAt)
 	}
 
-	submissionProto := &tasksv1.Submission{
+	submissionProto := &assignmentsv1.Submission{
 		Id:          details.Submission.ID.String(),
 		TemplateId:  details.Submission.TemplateID.String(),
 		StudentId:   details.Submission.StudentID.String(),
@@ -530,14 +530,14 @@ func (s *serverAPI) GetStudentSubmission(
 		SubmittedAt: submittedAtPb,
 	}
 
-	versionsHistory := make([]*tasksv1.SubmissionVersion, 0, len(details.Versions))
+	versionsHistory := make([]*assignmentsv1.SubmissionVersion, 0, len(details.Versions))
 	for _, version := range details.Versions {
 		versionPayload, err := rawMessageToStructPB(version.Payload)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to parse version payload")
 		}
 
-		versionsHistory = append(versionsHistory, &tasksv1.SubmissionVersion{
+		versionsHistory = append(versionsHistory, &assignmentsv1.SubmissionVersion{
 			Id:               version.ID.String(),
 			VersionNumber:    version.VersionNumber,
 			Payload:          versionPayload,
@@ -547,7 +547,7 @@ func (s *serverAPI) GetStudentSubmission(
 		})
 	}
 
-	feedbackHistory := make([]*tasksv1.Feedback, 0, len(details.Feedbacks))
+	feedbackHistory := make([]*assignmentsv1.Feedback, 0, len(details.Feedbacks))
 	for _, feedback := range details.Feedbacks {
 		feedbackPayload, err := rawMessageToStructPB(feedback.Payload)
 		if err != nil {
@@ -559,7 +559,7 @@ func (s *serverAPI) GetStudentSubmission(
 			textContent = *feedback.TextContent
 		}
 
-		feedbackHistory = append(feedbackHistory, &tasksv1.Feedback{
+		feedbackHistory = append(feedbackHistory, &assignmentsv1.Feedback{
 			Id:          feedback.ID.String(),
 			VersionId:   feedback.VersionID.String(),
 			GraderId:    feedback.GraderID.String(),
@@ -570,7 +570,7 @@ func (s *serverAPI) GetStudentSubmission(
 		})
 	}
 
-	return &tasksv1.GetStudentSubmissionResponse{
+	return &assignmentsv1.GetStudentSubmissionResponse{
 		Template:   templateProto,
 		Submission: submissionProto,
 		History:    versionsHistory,
@@ -580,8 +580,8 @@ func (s *serverAPI) GetStudentSubmission(
 
 func (s *serverAPI) ProvideFeedback(
 	ctx context.Context,
-	req *tasksv1.ProvideFeedbackRequest,
-) (*tasksv1.ProvideFeedbackResponse, error) {
+	req *assignmentsv1.ProvideFeedbackRequest,
+) (*assignmentsv1.ProvideFeedbackResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(
@@ -649,13 +649,13 @@ func (s *serverAPI) ProvideFeedback(
 		)
 	}
 
-	return &tasksv1.ProvideFeedbackResponse{}, nil
+	return &assignmentsv1.ProvideFeedbackResponse{}, nil
 }
 
 func (s *serverAPI) ListMyAssignments(
 	ctx context.Context,
-	req *tasksv1.ListMyAssignmentsRequest,
-) (*tasksv1.ListMyAssignmentsResponse, error) {
+	req *assignmentsv1.ListMyAssignmentsRequest,
+) (*assignmentsv1.ListMyAssignmentsResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(
@@ -693,10 +693,10 @@ func (s *serverAPI) ListMyAssignments(
 		)
 	}
 
-	items := make([]*tasksv1.ListMyAssignmentsResponse_StudentItem, 0, len(assignments))
+	items := make([]*assignmentsv1.ListMyAssignmentsResponse_StudentItem, 0, len(assignments))
 
 	for _, item := range assignments {
-		itemTemplate := &tasksv1.AssignmentTemplateLight{
+		itemTemplate := &assignmentsv1.AssignmentTemplateLight{
 			Id:         item.AssignmentID.String(),
 			Title:      item.Title,
 			WidgetType: item.WidgetType,
@@ -704,14 +704,14 @@ func (s *serverAPI) ListMyAssignments(
 		}
 		itemStatus := convertSubmissionStatus(*item.Status)
 
-		items = append(items, &tasksv1.ListMyAssignmentsResponse_StudentItem{
+		items = append(items, &assignmentsv1.ListMyAssignmentsResponse_StudentItem{
 			Template:    itemTemplate,
 			Status:      itemStatus,
 			HasFeedback: item.HasFeedback,
 		})
 	}
 
-	return &tasksv1.ListMyAssignmentsResponse{
+	return &assignmentsv1.ListMyAssignmentsResponse{
 		Items:         items,
 		NextPageToken: token,
 	}, nil
@@ -719,8 +719,8 @@ func (s *serverAPI) ListMyAssignments(
 
 func (s *serverAPI) StartAssignment(
 	ctx context.Context,
-	req *tasksv1.StartAssignmentRequest,
-) (*tasksv1.StartAssignmentResponse, error) {
+	req *assignmentsv1.StartAssignmentRequest,
+) (*assignmentsv1.StartAssignmentResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(
@@ -757,7 +757,7 @@ func (s *serverAPI) StartAssignment(
 		)
 	}
 
-	return &tasksv1.StartAssignmentResponse{
+	return &assignmentsv1.StartAssignmentResponse{
 		SubmissionId: submissionID.String(),
 		StartedAt:    timestamppb.New(startedAt),
 	}, nil
@@ -765,8 +765,8 @@ func (s *serverAPI) StartAssignment(
 
 func (s *serverAPI) SaveAssignmentDraft(
 	ctx context.Context,
-	req *tasksv1.SaveAssignmentDraftRequest,
-) (*tasksv1.SaveAssignmentDraftResponse, error) {
+	req *assignmentsv1.SaveAssignmentDraftRequest,
+) (*assignmentsv1.SaveAssignmentDraftResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(
@@ -819,7 +819,7 @@ func (s *serverAPI) SaveAssignmentDraft(
 		)
 	}
 
-	return &tasksv1.SaveAssignmentDraftResponse{
+	return &assignmentsv1.SaveAssignmentDraftResponse{
 		VersionId: submissionVersionID.String(),
 		SavedAt:   timestamppb.New(time.Now()),
 	}, nil
@@ -827,8 +827,8 @@ func (s *serverAPI) SaveAssignmentDraft(
 
 func (s *serverAPI) SubmitAssignment(
 	ctx context.Context,
-	req *tasksv1.SubmitAssignmentRequest,
-) (*tasksv1.SubmitAssignmentResponse, error) {
+	req *assignmentsv1.SubmitAssignmentRequest,
+) (*assignmentsv1.SubmitAssignmentResponse, error) {
 	userIDStr, err := auth.GetUserID(ctx)
 	if err != nil {
 		return nil, status.Error(
@@ -881,7 +881,7 @@ func (s *serverAPI) SubmitAssignment(
 		)
 	}
 
-	return &tasksv1.SubmitAssignmentResponse{
+	return &assignmentsv1.SubmitAssignmentResponse{
 		VersionId: submissionID.String(),
 		Status:    convertSubmissionStatus(submissionStatus),
 	}, nil

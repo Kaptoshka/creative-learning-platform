@@ -4,5 +4,5 @@ use (
 	./apps/api-gateway
 	./apps/sso
 	./apps/assignments
-	./libs/gen/go
+	./libs/protos
 )

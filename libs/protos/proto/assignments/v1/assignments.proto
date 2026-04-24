@@ -1,16 +1,16 @@
 syntax = "proto3";
 
-package tasks.v1;
+package assignments.v1;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
-import "tasks/v1/models.proto";
+import "proto/assignments/v1/models.proto";
 
-option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1;tasksv1";
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1;assignmentsv1";
 
-service TasksService {
+service AssignmentService {
   // --------------------------------
   // Teacher: Template management
   // --------------------------------
