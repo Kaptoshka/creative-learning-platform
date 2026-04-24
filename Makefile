@@ -1,4 +1,7 @@
-.PHONY: generate
-generate:
-	buf generate libs/protos
-	cd libs/gen/go && go mod init github.com/Kaptoshka/creative-learning-platform/libs/gen/go && go mod tidy
+.PHONY: gen-proto lint-protos
+
+gen-proto:
+	buf generate libs/protos --template libs/protos/buf.gen.yaml
+
+lint-protos:
+	buf lint libs/protos

@@ -1,0 +1,61 @@
+---
+services:
+    postgres:
+        image: postgres:18-alpine
+        container_name: postgres-dev
+        env_file:
+            - .env
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+        volumes:
+            - postgres_dev_data:/var/lib/postgresql
+        ports:
+            - "5432:5432"
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        networks:
+            - backend
+
+    assignment-service:
+        build:
+            context: ./apps/assignments
+            dockerfile: Dockerfile.dev
+        container_name: assignment-service-dev
+        env_file:
+            - apps/assignments/.env
+        environment:
+            CONFIG_PATH: /app/config/local.yaml
+            DB_HOST: postgres
+            DB_PORT: 5432
+            JWT_JWKS_URL: http://sso-service:8080/.well-known/jwks.json
+        volumes:
+            - .:/workspace
+            - ./apps/assignments:/app/src
+            - ./apps/assignments:/app/config:ro
+            - go_mod_cache:/root/go/pkg/mod
+            - go_build_cache:/root/.cache/go/build
+        ports:
+            - "50051:50051"
+            - "2345:2345"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - backend
+
+volumes:
+    postgres_dev_data:
+    go_mod_cache:
+    go_build_cache:
+networks:
+    backend:
+        driver: bridge

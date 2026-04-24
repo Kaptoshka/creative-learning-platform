@@ -1,0 +1,194 @@
+syntax = "proto3";
+
+package assignments.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "proto/assignments/v1/models.proto";
+
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1;assignmentsv1";
+
+service AssignmentService {
+  // --------------------------------
+  // Teacher: Template management
+  // --------------------------------
+
+  // Create
+  rpc CreateAssignment(CreateAssignmentRequest) returns (CreateAssignmentResponse);
+
+  // Update template. If student already started assignment, it will not be updated.
+  rpc UpdateAssignment(UpdateAssignmentRequest) returns (UpdateAssignmentResponse);
+
+  // Delete template
+  rpc DeleteAssignment(DeleteAssignmentRequest) returns (DeleteAssignmentResponse);
+
+  // Retrieve details of an assignment
+  rpc GetAssignment(GetAssignmentRequest) returns (GetAssignmentResponse);
+
+  // --------------------------------
+  // Teacher: Provide feedback for student submissions and retrieve list of submissions and assignments
+  // --------------------------------
+
+  rpc ListAssignments(ListAssignmentsRequest) returns (ListAssignmentsResponse);
+
+  rpc ListAssignmentSubmissions(ListAssignmentSubmissionsRequest) returns (ListAssignmentSubmissionsResponse);
+
+  rpc GetStudentSubmission(GetStudentSubmissionRequest) returns (GetStudentSubmissionResponse);
+
+  rpc ProvideFeedback(ProvideFeedbackRequest) returns (ProvideFeedbackResponse);
+
+  // --------------------------------
+  // Student: Complete assignment workflow
+  // --------------------------------
+
+  // Workflow of student with assignment
+  rpc ListMyAssignments(ListMyAssignmentsRequest) returns (ListMyAssignmentsResponse);
+
+  rpc StartAssignment(StartAssignmentRequest) returns (StartAssignmentResponse);
+
+  rpc SaveAssignmentDraft(SaveAssignmentDraftRequest) returns (SaveAssignmentDraftResponse);
+
+  rpc SubmitAssignment(SubmitAssignmentRequest) returns (SubmitAssignmentResponse);
+}
+
+// --- Messages ---
+
+message CreateAssignmentRequest {
+  string title = 1;
+  string description = 2;
+
+  string widget_id = 3;
+  google.protobuf.Struct widget_config = 4;
+
+  google.protobuf.Timestamp due_date = 5;
+  repeated AssignmentTarget targets = 6;
+}
+
+message CreateAssignmentResponse {
+  string id = 1;
+}
+
+message UpdateAssignmentRequest {
+  string assignment_id = 1;
+  AssignmentTemplate template = 2;
+  google.protobuf.FieldMask update_mask = 3;
+  repeated AssignmentTarget targets = 4;
+}
+
+message UpdateAssignmentResponse {
+  AssignmentTemplate template = 1;
+}
+
+message DeleteAssignmentRequest {
+  string id = 1;
+}
+
+message DeleteAssignmentResponse {}
+
+message GetAssignmentRequest {
+  string id = 1;
+}
+
+message GetAssignmentResponse {
+  AssignmentTemplate template = 1;
+  repeated AssignmentTarget targets = 2;
+}
+
+message ListAssignmentsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+
+  string creator_id = 3;
+}
+
+message ListAssignmentsResponse {
+  repeated AssignmentTemplateLight items = 1;
+  string next_page_token = 2;
+}
+
+// --- Student Requests ---
+
+message ListMyAssignmentsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  SubmissionStatus status_filter = 3;
+}
+
+message ListMyAssignmentsResponse {
+  message StudentItem {
+    AssignmentTemplateLight template = 1;
+    SubmissionStatus status = 2;
+    bool has_feedback = 3;
+  }
+  repeated StudentItem items = 1;
+  string next_page_token = 2;
+}
+
+message StartAssignmentRequest {
+  string template_id = 1;
+}
+
+message StartAssignmentResponse {
+  string submission_id = 1;
+  google.protobuf.Timestamp started_at = 2;
+}
+
+message SaveAssignmentDraftRequest {
+  string submission_id = 1;
+  google.protobuf.Struct payload = 2;
+
+  google.protobuf.Duration time_spent = 3;
+}
+
+message SaveAssignmentDraftResponse {
+  string version_id = 1;
+  google.protobuf.Timestamp saved_at = 2;
+}
+
+message SubmitAssignmentRequest {
+  string submission_id = 1;
+  google.protobuf.Struct payload = 2;
+  google.protobuf.Duration time_spent = 3;
+}
+
+message SubmitAssignmentResponse {
+  string version_id = 1;
+  SubmissionStatus status = 2;
+}
+
+// --- Grading Requests ---
+
+message ListAssignmentSubmissionsRequest {
+  string template_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  SubmissionStatus status_filter = 4;
+}
+
+message ListAssignmentSubmissionsResponse {
+  repeated Submission items = 1;
+  string next_page_token = 2;
+}
+
+message GetStudentSubmissionRequest {
+  string submission_id = 1;
+}
+
+message GetStudentSubmissionResponse {
+  AssignmentTemplate template = 1;
+  Submission submission = 2;
+  repeated SubmissionVersion history = 3;
+  repeated Feedback feedback = 4;
+}
+
+message ProvideFeedbackRequest {
+  string submission_id = 1;
+  string version_id = 2;
+  string text_content = 3;
+  google.protobuf.Struct payload = 4;
+  bool is_published = 5;
+}
+
+message ProvideFeedbackResponse {}

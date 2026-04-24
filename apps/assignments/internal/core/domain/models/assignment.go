@@ -1,0 +1,39 @@
+package models
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/core/domain"
+
+	"github.com/google/uuid"
+)
+
+type AssignmentTemplate struct {
+	ID           uuid.UUID       `db:"id"`
+	CreatorID    uuid.UUID       `db:"creator_id"`
+	Title        string          `db:"title"`
+	Description  string          `db:"description"`
+	WidgetID     uuid.UUID       `db:"widget_id"`
+	WidgetConfig json.RawMessage `db:"widget_config"`
+	DueDate      *time.Time      `db:"due_date"`
+	CreatedAt    time.Time       `db:"created_at"`
+	UpdatedAt    time.Time       `db:"updated_at"`
+}
+
+type AssignmentTemplateLight struct {
+	ID         uuid.UUID               `db:"id"`
+	Title      string                  `db:"title"`
+	Status     domain.SubmissionStatus `db:"status"`
+	WidgetType string                  `db:"widget_type"`
+	DueDate    *time.Time              `db:"due_date"`
+}
+
+type AssignmentTarget struct {
+	ID         uuid.UUID  `db:"id"`
+	TemplateID uuid.UUID  `db:"template_id"`
+	GroupID    *uuid.UUID `db:"group_id"`
+	StudentID  *uuid.UUID `db:"student_id"`
+	CreatedAt  time.Time  `db:"created_at"`
+	UpdatedAt  time.Time  `db:"updated_at"`
+}

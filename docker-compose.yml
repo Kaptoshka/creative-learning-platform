@@ -1,0 +1,114 @@
+---
+services:
+    postgres:
+        image: postgres:18-alpine
+        container_name: postgres
+        env_file:
+            - .env
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+        volumes:
+            - postgres_data:/var/lib/postgresql
+        ports:
+            - "5432:5432"
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+                ]
+            interval: 10s
+            timeout: 10s
+            retries: 15
+        networks:
+            - backend
+
+    sso-service:
+        build:
+            context: ./apps/sso
+            dockerfile: Dockerfile
+        container_name: sso-service
+        env_file:
+            - apps/sso/.env
+        environment:
+            CONFIG_PATH: /app/config/config.yaml
+            DB_HOST: postgres
+            DB_PORT: 5432
+        volumes:
+            - ./apps/sso/config:/app/config:ro
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - backend
+
+    assignment-service:
+        build:
+            context: ./apps/assignments
+            dockerfile: Dockerfile
+        container_name: assignment-service
+        env_file:
+            - apps/assignments/.env
+        environment:
+            CONFIG_PATH: /app/config/config.yaml
+            DB_HOST: postgres
+            DB_PORT: 5432
+            JWT_JWKS_URL: http://sso-service:8080/.well-known/jwks.json
+        volumes:
+            - ./apps/assignments/config:/app/config:ro
+        depends_on:
+            postgres:
+                condition: service_healthy
+            sso-service:
+                condition: service_started
+        networks:
+            - backend
+
+    api-gateway:
+        build:
+            context: ./apps/api-gateway
+            dockerfile: Dockerfile
+        container_name: api-gateway
+        env_file:
+            - apps/api-gateway/.env
+        environment:
+            CONFIG_PATH: /app/config/config.yaml
+            ASSIGNMENT_SERVICE_ADDR: assignment-service:50051
+            SSO_SERVICE_ADDR: sso-service:50052
+        volumes:
+            - ./apps/api-gateway/config:/app/config:ro
+        ports:
+            - "8080:8080"
+        depends_on:
+            - assignment-service
+            - sso-service
+        networks:
+            - backend
+            - frontend
+
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        container_name: frontend
+        env_file:
+            - frontend/.env
+        environment:
+            API_URL: http://api-gateway:8080
+        ports:
+            - "3000:3000"
+        depends_on:
+            - api-gateway
+        networks:
+            - frontend
+
+volumes:
+    postgres_data:
+
+networks:
+    backend:
+        driver: bridge
+    frontend:
+        driver: bridge
