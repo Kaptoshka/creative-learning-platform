@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/Kaptoshka/creative-learning-platform/services/gateway/config"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/config"
 )
 
 func CORS(cfg *config.Config) func(http.Handler) http.Handler {

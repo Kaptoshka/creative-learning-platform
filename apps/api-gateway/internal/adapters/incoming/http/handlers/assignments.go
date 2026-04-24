@@ -3,22 +3,32 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/httputil"
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/middleware"
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	httputil "github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/utils"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/ports/outgoing"
 )
 
 type AssignmentsHandler struct {
-	uc outgoing.AssignmentsService
+	uc outgoing.AssignmentService
 }
 
-func NewAssignmentsHandler(uc outgoing.AssignmentsService) *AssignmentsHandler {
+func NewAssignmentsHandler(uc outgoing.AssignmentService) *AssignmentsHandler {
 	return &AssignmentsHandler{uc: uc}
 }
 
 // --- Teacher: template management ---
 
+// @Summary Create assignment template
+// @Description Creates a new assignment template for teachers
+// @Tags Assignments
+// @Accept json
+// @Produce json
+// @Param request body domain.CreateAssignmentRequest true "Assignment template details"
+// @Success 201 {object} domain.CreateAssignmentResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Router /assignments [post]
 func (h *AssignmentsHandler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 	var req domain.CreateAssignmentRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -35,6 +45,17 @@ func (h *AssignmentsHandler) CreateAssignment(w http.ResponseWriter, r *http.Req
 	httputil.Created(w, res)
 }
 
+// @Summary Update assignment template
+// @Description Updates an existing assignment template with optional field mask
+// @Tags Assignments
+// @Accept json
+// @Produce json
+// @Param request body domain.UpdateAssignmentRequest true "Assignment update details"
+// @Success 200 {object} domain.UpdateAssignmentResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Failure 404 {object} domain.Error
+// @Router /assignments [patch]
 func (h *AssignmentsHandler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 	var req domain.UpdateAssignmentRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -51,6 +72,15 @@ func (h *AssignmentsHandler) UpdateAssignment(w http.ResponseWriter, r *http.Req
 	httputil.OK(w, res)
 }
 
+// @Summary Delete assignment template
+// @Description Deletes an assignment template by ID
+// @Tags Assignments
+// @Param id path string true "Assignment Template ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Failure 404 {object} domain.Error
+// @Router /assignments/{id} [delete]
 func (h *AssignmentsHandler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -66,6 +96,16 @@ func (h *AssignmentsHandler) DeleteAssignment(w http.ResponseWriter, r *http.Req
 	httputil.NoContent(w)
 }
 
+// @Summary Get assignment template
+// @Description Retrieves a single assignment template by ID
+// @Tags Assignments
+// @Produce json
+// @Param id path string true "Assignment Template ID"
+// @Success 200 {object} domain.GetAssignmentResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Failure 404 {object} domain.Error
+// @Router /assignments/{id} [get]
 func (h *AssignmentsHandler) GetAssignment(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -84,6 +124,16 @@ func (h *AssignmentsHandler) GetAssignment(w http.ResponseWriter, r *http.Reques
 
 // --- Teacher: submissions & feedback ---
 
+// @Summary List assignment templates
+// @Description Returns a paginated list of assignment templates, optionally filtered by creator
+// @Tags Assignments
+// @Produce json
+// @Param page_size query int false "Page size (10, 25, 50, default 20)"
+// @Param page_token query string false "Pagination token"
+// @Param creator_id query string false "Filter by creator ID"
+// @Success 200 {object} domain.ListAssignmentsResponse
+// @Failure 401 {object} domain.Error
+// @Router /assignments [get]
 func (h *AssignmentsHandler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 	res, err := h.uc.ListAssignments(r.Context(), domain.ListAssignmentsRequest{
 		PageSize:  pageSize(r),
@@ -98,6 +148,17 @@ func (h *AssignmentsHandler) ListAssignments(w http.ResponseWriter, r *http.Requ
 	httputil.OK(w, res)
 }
 
+// @Summary List assignment submissions
+// @Description Returns a paginated list of student submissions for a specific assignment template
+// @Tags Assignments
+// @Produce json
+// @Param template_id path string true "Assignment Template ID"
+// @Param page_size query int false "Page size (10, 25, 50, default 20)"
+// @Param page_token query string false "Pagination token"
+// @Success 200 {object} domain.ListAssignmentSubmissionsResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Router /assignments/{template_id}/submissions [get]
 func (h *AssignmentsHandler) ListAssignmentSubmissions(w http.ResponseWriter, r *http.Request) {
 	templateID := r.PathValue("template_id")
 	if templateID == "" {
@@ -118,6 +179,16 @@ func (h *AssignmentsHandler) ListAssignmentSubmissions(w http.ResponseWriter, r 
 	httputil.OK(w, res)
 }
 
+// @Summary Get student submission
+// @Description Retrieves a student's submission with full history and feedback
+// @Tags Assignments
+// @Produce json
+// @Param submission_id path string true "Submission ID"
+// @Success 200 {object} domain.GetStudentSubmissionResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Failure 404 {object} domain.Error
+// @Router /assignments/submissions/{submission_id} [get]
 func (h *AssignmentsHandler) GetStudentSubmission(w http.ResponseWriter, r *http.Request) {
 	submissionID := r.PathValue("submission_id")
 	if submissionID == "" {
@@ -136,6 +207,17 @@ func (h *AssignmentsHandler) GetStudentSubmission(w http.ResponseWriter, r *http
 	httputil.OK(w, res)
 }
 
+// @Summary Provide feedback on submission
+// @Description Teacher provides feedback (grade, comments) for a student's submission version
+// @Tags Assignments
+// @Accept json
+// @Param submission_id path string true "Submission ID"
+// @Param request body domain.ProvideFeedbackRequest true "Feedback details"
+// @Success 204 "No Content"
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Failure 404 {object} domain.Error
+// @Router /assignments/submissions/{submission_id}/feedback [post]
 func (h *AssignmentsHandler) ProvideFeedback(w http.ResponseWriter, r *http.Request) {
 	var req domain.ProvideFeedbackRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -156,6 +238,15 @@ func (h *AssignmentsHandler) ProvideFeedback(w http.ResponseWriter, r *http.Requ
 
 // --- Student: assignment workflow ---
 
+// @Summary List my assignments
+// @Description Returns a paginated list of assignments assigned to the current student
+// @Tags Assignments
+// @Produce json
+// @Param page_size query int false "Page size (10, 25, 50, default 20)"
+// @Param page_token query string false "Pagination token"
+// @Success 200 {object} domain.ListMyAssignmentsResponse
+// @Failure 401 {object} domain.Error
+// @Router /students/me/assignments [get]
 func (h *AssignmentsHandler) ListMyAssignments(w http.ResponseWriter, r *http.Request) {
 	res, err := h.uc.ListMyAssignments(r.Context(), domain.ListMyAssignmentsRequest{
 		PageSize:  pageSize(r),
@@ -169,6 +260,16 @@ func (h *AssignmentsHandler) ListMyAssignments(w http.ResponseWriter, r *http.Re
 	httputil.OK(w, res)
 }
 
+// @Summary Start assignment
+// @Description Student starts working on an assignment template, creates a submission
+// @Tags Assignments
+// @Produce json
+// @Param template_id path string true "Assignment Template ID"
+// @Success 201 {object} domain.StartAssignmentResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Failure 404 {object} domain.Error
+// @Router /students/me/assignments/{template_id} [post]
 func (h *AssignmentsHandler) StartAssignment(w http.ResponseWriter, r *http.Request) {
 	templateID := r.PathValue("template_id")
 	if templateID == "" {
@@ -189,6 +290,18 @@ func (h *AssignmentsHandler) StartAssignment(w http.ResponseWriter, r *http.Requ
 	httputil.Created(w, res)
 }
 
+// @Summary Save assignment draft
+// @Description Student saves draft progress for a submission (autosave)
+// @Tags Assignments
+// @Accept json
+// @Produce json
+// @Param submission_id path string true "Submission ID"
+// @Param request body domain.SaveAssignmentDraftRequest true "Draft content"
+// @Success 200 {object} domain.SaveAssignmentDraftResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Failure 404 {object} domain.Error
+// @Router /students/me/assignments/submissions/{submission_id}/draft [put]
 func (h *AssignmentsHandler) SaveAssignmentDraft(w http.ResponseWriter, r *http.Request) {
 	var req domain.SaveAssignmentDraftRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -207,6 +320,18 @@ func (h *AssignmentsHandler) SaveAssignmentDraft(w http.ResponseWriter, r *http.
 	httputil.OK(w, res)
 }
 
+// @Summary Submit assignment
+// @Description Student submits final version of their assignment for grading
+// @Tags Assignments
+// @Accept json
+// @Produce json
+// @Param submission_id path string true "Submission ID"
+// @Param request body domain.SubmitAssignmentRequest true "Final submission content"
+// @Success 200 {object} domain.SubmitAssignmentResponse
+// @Failure 400 {object} domain.Error
+// @Failure 401 {object} domain.Error
+// @Failure 404 {object} domain.Error
+// @Router /students/me/assignments/submissions/{submission_id}/submit [post]
 func (h *AssignmentsHandler) SubmitAssignment(w http.ResponseWriter, r *http.Request) {
 	var req domain.SubmitAssignmentRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {

@@ -3,8 +3,8 @@ package grpc
 import (
 	"time"
 
-	tasksv1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/tasks/v1"
-	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/domain"
+	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
+	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/assignments/v1"
 
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -67,39 +67,39 @@ func protoToMap(s *structpb.Struct) map[string]any {
 
 // --- AssignmentTarget ---
 
-func targetToProto(t domain.AssignmentTarget) *tasksv1.AssignmentTarget {
+func targetToProto(t domain.AssignmentTarget) *assignmentsv1.AssignmentTarget {
 	if t.GroupID != "" {
-		return &tasksv1.AssignmentTarget{
-			Target: &tasksv1.AssignmentTarget_GroupId{GroupId: t.GroupID},
+		return &assignmentsv1.AssignmentTarget{
+			Target: &assignmentsv1.AssignmentTarget_GroupId{GroupId: t.GroupID},
 		}
 	}
-	return &tasksv1.AssignmentTarget{
-		Target: &tasksv1.AssignmentTarget_StudentId{StudentId: t.StudentID},
+	return &assignmentsv1.AssignmentTarget{
+		Target: &assignmentsv1.AssignmentTarget_StudentId{StudentId: t.StudentID},
 	}
 }
 
-func targetsToProto(targets []domain.AssignmentTarget) []*tasksv1.AssignmentTarget {
-	result := make([]*tasksv1.AssignmentTarget, len(targets))
+func targetsToProto(targets []domain.AssignmentTarget) []*assignmentsv1.AssignmentTarget {
+	result := make([]*assignmentsv1.AssignmentTarget, len(targets))
 	for i, t := range targets {
 		result[i] = targetToProto(t)
 	}
 	return result
 }
 
-func protoToTarget(t *tasksv1.AssignmentTarget) domain.AssignmentTarget {
+func protoToTarget(t *assignmentsv1.AssignmentTarget) domain.AssignmentTarget {
 	if t == nil {
 		return domain.AssignmentTarget{}
 	}
 	switch v := t.Target.(type) {
-	case *tasksv1.AssignmentTarget_GroupId:
+	case *assignmentsv1.AssignmentTarget_GroupId:
 		return domain.AssignmentTarget{GroupID: v.GroupId}
-	case *tasksv1.AssignmentTarget_StudentId:
+	case *assignmentsv1.AssignmentTarget_StudentId:
 		return domain.AssignmentTarget{StudentID: v.StudentId}
 	}
 	return domain.AssignmentTarget{}
 }
 
-func protoToTargets(targets []*tasksv1.AssignmentTarget) []domain.AssignmentTarget {
+func protoToTargets(targets []*assignmentsv1.AssignmentTarget) []domain.AssignmentTarget {
 	result := make([]domain.AssignmentTarget, len(targets))
 	for i, t := range targets {
 		result[i] = protoToTarget(t)
@@ -109,7 +109,7 @@ func protoToTargets(targets []*tasksv1.AssignmentTarget) []domain.AssignmentTarg
 
 // --- AssignmentTemplate ---
 
-func protoToTemplate(t *tasksv1.AssignmentTemplate) domain.AssignmentTemplate {
+func protoToTemplate(t *assignmentsv1.AssignmentTemplate) domain.AssignmentTemplate {
 	if t == nil {
 		return domain.AssignmentTemplate{}
 	}
@@ -126,7 +126,7 @@ func protoToTemplate(t *tasksv1.AssignmentTemplate) domain.AssignmentTemplate {
 	}
 }
 
-func protoToTemplateLight(t *tasksv1.AssignmentTemplateLight) domain.AssignmentTemplateLight {
+func protoToTemplateLight(t *assignmentsv1.AssignmentTemplateLight) domain.AssignmentTemplateLight {
 	if t == nil {
 		return domain.AssignmentTemplateLight{}
 	}
@@ -140,7 +140,7 @@ func protoToTemplateLight(t *tasksv1.AssignmentTemplateLight) domain.AssignmentT
 
 // --- Submission ---
 
-func protoToSubmission(s *tasksv1.Submission) domain.Submission {
+func protoToSubmission(s *assignmentsv1.Submission) domain.Submission {
 	if s == nil {
 		return domain.Submission{}
 	}
@@ -153,13 +153,13 @@ func protoToSubmission(s *tasksv1.Submission) domain.Submission {
 		SubmittedAt: protoToTime(s.SubmittedAt),
 	}
 	if s.LatestVersion != nil {
-		v := protoToVersion(s.LatestVersion)
+		v := protoToVersionLight(s.LatestVersion)
 		sub.LatestVersion = &v
 	}
 	return sub
 }
 
-func protoToSubmissions(items []*tasksv1.Submission) []domain.Submission {
+func protoToSubmissions(items []*assignmentsv1.Submission) []domain.Submission {
 	result := make([]domain.Submission, len(items))
 	for i, s := range items {
 		result[i] = protoToSubmission(s)
@@ -169,7 +169,7 @@ func protoToSubmissions(items []*tasksv1.Submission) []domain.Submission {
 
 // --- SubmissionVersion ---
 
-func protoToVersion(v *tasksv1.SubmissionVersion) domain.SubmissionVersion {
+func protoToVersion(v *assignmentsv1.SubmissionVersion) domain.SubmissionVersion {
 	if v == nil {
 		return domain.SubmissionVersion{}
 	}
@@ -184,7 +184,18 @@ func protoToVersion(v *tasksv1.SubmissionVersion) domain.SubmissionVersion {
 	}
 }
 
-func protoToVersions(items []*tasksv1.SubmissionVersion) []domain.SubmissionVersion {
+func protoToVersionLight(v *assignmentsv1.SubmissionVersionLight) domain.SubmissionVersionLight {
+	if v == nil {
+		return domain.SubmissionVersionLight{}
+	}
+	return domain.SubmissionVersionLight{
+		ID: v.Id,
+		VersionNumber: v.VersionNumber,
+		CreatedAt: protoToTimeVal(v.CreatedAt),
+	}
+}
+
+func protoToVersions(items []*assignmentsv1.SubmissionVersion) []domain.SubmissionVersion {
 	result := make([]domain.SubmissionVersion, len(items))
 	for i, v := range items {
 		result[i] = protoToVersion(v)
@@ -194,7 +205,7 @@ func protoToVersions(items []*tasksv1.SubmissionVersion) []domain.SubmissionVers
 
 // --- Feedback ---
 
-func protoToFeedback(f *tasksv1.Feedback) domain.Feedback {
+func protoToFeedback(f *assignmentsv1.Feedback) domain.Feedback {
 	if f == nil {
 		return domain.Feedback{}
 	}
@@ -210,7 +221,7 @@ func protoToFeedback(f *tasksv1.Feedback) domain.Feedback {
 	}
 }
 
-func protoToFeedbacks(items []*tasksv1.Feedback) []domain.Feedback {
+func protoToFeedbacks(items []*assignmentsv1.Feedback) []domain.Feedback {
 	result := make([]domain.Feedback, len(items))
 	for i, f := range items {
 		result[i] = protoToFeedback(f)
@@ -220,6 +231,6 @@ func protoToFeedbacks(items []*tasksv1.Feedback) []domain.Feedback {
 
 // --- SubmissionStatus ---
 
-func statusToProto(s domain.SubmissionStatus) tasksv1.SubmissionStatus {
-	return tasksv1.SubmissionStatus(s)
+func statusToProto(s domain.SubmissionStatus) assignmentsv1.SubmissionStatus {
+	return assignmentsv1.SubmissionStatus(s)
 }

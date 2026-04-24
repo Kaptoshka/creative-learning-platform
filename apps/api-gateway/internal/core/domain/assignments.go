@@ -18,15 +18,15 @@ const (
 // --- Entities ---
 
 type AssignmentTemplate struct {
-	ID          string
-	CreatorID   string
-	Title       string
-	Description string
-	WidgetID    string
+	ID           string
+	CreatorID    string
+	Title        string
+	Description  string
+	WidgetID     string
 	WidgetConfig map[string]any
-	DueDate     *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	DueDate      *time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type AssignmentTemplateLight struct {
@@ -49,17 +49,23 @@ type Submission struct {
 	Status        SubmissionStatus
 	StartedAt     *time.Time
 	SubmittedAt   *time.Time
-	LatestVersion *SubmissionVersion
+	LatestVersion *SubmissionVersionLight
 }
 
 type SubmissionVersion struct {
-	ID             string
-	VersionNumber  int32
-	Payload        map[string]any
-	TimeSpent      time.Duration
-	IsAutosave     bool
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID            string
+	VersionNumber int32
+	Payload       map[string]any
+	TimeSpent     time.Duration
+	IsAutosave    bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type SubmissionVersionLight struct {
+	ID            string
+	VersionNumber int32
+	CreatedAt     time.Time
 }
 
 type Feedback struct {
@@ -142,10 +148,10 @@ type GetStudentSubmissionRequest struct {
 }
 
 type GetStudentSubmissionResponse struct {
-	Template  AssignmentTemplate
+	Template   AssignmentTemplate
 	Submission Submission
-	History   []SubmissionVersion
-	Feedback  []Feedback
+	History    []SubmissionVersion
+	Feedback   []Feedback
 }
 
 type ProvideFeedbackRequest struct {
