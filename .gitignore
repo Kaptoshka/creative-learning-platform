@@ -1,7 +1,11 @@
 node_modules
 .env
 *local*
+*logs.md
+.direnv/
 
 gen/
 
 .DS_STORE
+
+*todo*

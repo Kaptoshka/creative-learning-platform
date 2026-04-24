@@ -1,11 +1,11 @@
-package grpcapp
+package grpc
 
 import (
 	"fmt"
 	"log/slog"
 	"net"
 
-	authgrpc "sso/internal/transport/grpc/auth"
+	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/ports/driving"
 
 	"google.golang.org/grpc"
 )
@@ -16,29 +16,32 @@ type App struct {
 	port       int
 }
 
-// New creates a new instance of the gRPC app struct.
 func New(
 	log *slog.Logger,
-	authService authgrpc.Auth,
+	assignmentService driving.AssignmentService,
+	submissionService driving.SubmissionService,
+	feedbackService driving.FeedbackService,
 	port int,
-) *App {
-	gRPCServer := grpc.NewServer()
+	jwksURL string,
+) (*App, error) {
+	authInterceptor, err := NewAuthInterceptor(jwksURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize auth interceptor: %w", err)
+	}
 
-	authgrpc.Register(gRPCServer, authService)
+	gRPCServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			authInterceptor.Unary(),
+		),
+	)
+
+	Register(gRPCServer, assignmentService, submissionService, feedbackService)
 
 	return &App{
 		log:        log,
 		gRPCServer: gRPCServer,
 		port:       port,
-	}
-}
-
-// MustRun run gRPC server and panic if error occurs
-func (a *App) MustRun() {
-	if err := a.Run(); err != nil {
-		a.log.Error("failed to run app", "error", err)
-		panic(err)
-	}
+	}, nil
 }
 
 // Run runs gRPC server
@@ -67,10 +70,11 @@ func (a *App) Run() error {
 func (a *App) Stop() {
 	const op = "grpcapp.Stop"
 
-	a.log.With(
+	log := a.log.With(
 		slog.String("op", op),
 		slog.Int("port", a.port),
 	)
 
+	log.Info("stopping gRPC server")
 	a.gRPCServer.GracefulStop()
 }

@@ -17,7 +17,7 @@ import (
 type Suite struct {
 	*testing.T
 	Cfg        *config.Config
-	AuthClient ssov1.AuthClient
+	AuthClient ssov1.AuthServiceClient
 }
 
 const (
@@ -51,7 +51,7 @@ func New(t *testing.T) (context.Context, *Suite) {
 	return ctx, &Suite{
 		T:          t,
 		Cfg:        cfg,
-		AuthClient: ssov1.NewAuthClient(cc),
+		AuthClient: ssov1.NewAuthServiceClient(cc),
 	}
 }
 
