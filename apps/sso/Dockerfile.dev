@@ -1,0 +1,45 @@
+# ─── Stage 1: proto generation ───────────────────────────────────────────────
+FROM golang:1.26-alpine as proto-gen
+
+RUN apk add --no-cache git ca-certificates curl tzdata
+
+RUN curl -sSL https://github.com/bufbuild/buf/releases/latest/download/buf-Linux-x86_64 \
+    -o /usr/local/bin/buf \
+    && chmod +x /usr/local/bin/buf
+
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
+    && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+WORKDIR /workspace
+
+COPY libs/protos/buf.yaml        libs/protos/buf.yaml
+COPY libs/protos/buf.gen.yaml    libs/protos/buf.gen.yaml
+COPY libs/protos/proto/          libs/protos/proto/
+COPY libs/protos/go.mod          libs/protos/go.mod
+
+RUN buf generate libs/protos --template libs/protos/buf.gen.yaml
+
+# ─── Stage 2: dev ────────────────────────────────────────────────────────────
+FROM golang:1.26-alpine AS dev
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+RUN go install github.com/air-verse/air@latest \
+    && go install github.com/go-delve/delve/cmd/dlv@latest
+
+WORKDIR /workspace
+
+COPY libs/protos/go.mod libs/protos/go.mod
+COPY --from=proto-gen /workspace/libs/protos/gen/ libs/protos/gen/
+
+COPY go.work go.work.sum ./
+
+COPY apps/sso/go.mod apps/sso/go.sum ./apps/sso/
+RUN cd apps/sso && go mod download
+
+WORKDIR /workspace/apps/sso
+
+EXPOSE 50052
+EXPOSE 2346
+
+CMD ["sh", "-c", "go mod download && air -c .air.toml"]
