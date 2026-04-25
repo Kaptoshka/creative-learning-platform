@@ -1,4 +1,4 @@
-module sso
+module github.com/Kaptoshka/creative-learning-platform/sso-service
 
 go 1.26.1
 

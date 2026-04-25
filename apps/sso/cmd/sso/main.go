@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"sso/internal/app"
-	"sso/internal/config"
+	"github.com/Kaptoshka/creative-learning-platform/sso-service/app"
+	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/config"
 )
 
 const (

@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"testing"
 
-	"sso/internal/config"
+	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/config"
 
-	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/sso/v1"
+	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/sso/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

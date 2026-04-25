@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"sso/tests/suite"
+	"github.com/Kaptoshka/creative-learning-platform/sso-service/tests/suite"
 
-	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/gen/go/sso/v1"
+	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/sso/v1"
 	"github.com/brianvoe/gofakeit"
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
