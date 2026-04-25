@@ -1,4 +1,9 @@
 ---
+x-assignments-build: &assignments-build
+    build:
+        context: .
+        dockerfile: apps/assignments/Dockerfile
+
 services:
     postgres:
         image: postgres:18-alpine
@@ -27,8 +32,8 @@ services:
 
     sso-service:
         build:
-            context: ./apps/sso
-            dockerfile: Dockerfile
+            context: .
+            dockerfile: apps/sso/Dockerfile
         container_name: sso-service
         env_file:
             - apps/sso/.env
@@ -44,10 +49,24 @@ services:
         networks:
             - backend
 
+    migrate-assignments:
+        <<: *assignments-build
+        container_name: migrate-assignments
+        env_file:
+            - apps/assignments/.env
+        environment:
+            DB_HOST: postgres
+            DB_PORT: 5432
+            MIGRATIONS_PATH: /migrations
+        entrypoint: ["/bin/migrator"]
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - backend
+
     assignment-service:
-        build:
-            context: ./apps/assignments
-            dockerfile: Dockerfile
+        <<: *assignments-build
         container_name: assignment-service
         env_file:
             - apps/assignments/.env
@@ -56,9 +75,12 @@ services:
             DB_HOST: postgres
             DB_PORT: 5432
             JWT_JWKS_URL: http://sso-service:8080/.well-known/jwks.json
+        entrypoint: ["/bin/assignments"]
         volumes:
             - ./apps/assignments/config:/app/config:ro
         depends_on:
+            migrate-assignments:
+                condition: service_completed_successfully
             postgres:
                 condition: service_healthy
             sso-service:
@@ -68,8 +90,8 @@ services:
 
     api-gateway:
         build:
-            context: ./apps/api-gateway
-            dockerfile: Dockerfile
+            context: .
+            dockerfile: apps/api-gateway/Dockerfile
         container_name: api-gateway
         env_file:
             - apps/api-gateway/.env
@@ -82,8 +104,10 @@ services:
         ports:
             - "8080:8080"
         depends_on:
-            - assignment-service
-            - sso-service
+            assignment-service:
+                condition: service_started
+            sso-service:
+                condition: service_started
         networks:
             - backend
             - frontend

@@ -1,19 +1,45 @@
-FROM golang:1.26-alpine
+# ─── Stage 1: proto generation ───────────────────────────────────────────────
+FROM golang:1.26-alpine as proto-gen
 
-RUN apk add --no-cache git ca-certificates tzdata make curl unzip
+RUN apk add --no-cache git ca-certificates curl tzdata
 
-RUN curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-Linux-x86_64" -o /usr/local/bin/buf \
+RUN curl -sSL https://github.com/bufbuild/buf/releases/latest/download/buf-Linux-x86_64 \
+    -o /usr/local/bin/buf \
     && chmod +x /usr/local/bin/buf
 
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
     && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
-RUN go install github.com/air-verse/air@latest
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
+WORKDIR /workspace
 
-WORKDIR /app/src
+COPY libs/protos/buf.yaml        libs/protos/buf.yaml
+COPY libs/protos/buf.gen.yaml    libs/protos/buf.gen.yaml
+COPY libs/protos/proto/          libs/protos/proto/
+COPY libs/protos/go.mod          libs/protos/go.mod
+
+RUN buf generate libs/protos --template libs/protos/buf.gen.yaml
+
+# ─── Stage 2: dev ────────────────────────────────────────────────────────────
+FROM golang:1.26-alpine AS dev
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+RUN go install github.com/air-verse/air@latest \
+    && go install github.com/go-delve/delve/cmd/dlv@latest
+
+WORKDIR /workspace
+
+COPY libs/protos/go.mod libs/protos/go.mod
+COPY --from=proto-gen /workspace/libs/protos/gen/ libs/protos/gen/
+
+COPY go.work go.work.sum ./
+
+COPY apps/assignments/go.mod apps/assignments/go.sum ./apps/assignments/
+RUN cd apps/assignments && go mod download
+
+WORKDIR /workspace/apps/assignments
 
 EXPOSE 50051
 EXPOSE 2345
 
-ENTRYPOINT ["sh", "-c", "cd /workspace && buf generate libs/protos && cd libs/gen/go && go mod init github.com/Kaptoshka/creative-learning-platform/libs/gen/go || true && go mod tidy && cd /app/src && go mod download && air -c .air.toml"]
+CMD ["sh", "-c", "go mod download && air -c .air.toml"]
