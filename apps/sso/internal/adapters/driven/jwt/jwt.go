@@ -9,12 +9,21 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+type JWTService struct {
+	ttl time.Duration
+}
+
+func New(ttl time.Duration) *JWTService {
+	return &JWTService{
+		ttl: ttl,
+	}
+}
+
 // GenerateNewToken generates a new JWT token
 // for the given user, app, duration, role, and permission scope.
-func GenerateNewToken(
+func (j *JWTService) GenerateNewToken(
 	user models.User,
 	app models.App,
-	duration time.Duration,
 	role string,
 	scope []string,
 ) (string, error) {
@@ -25,7 +34,7 @@ func GenerateNewToken(
 	claims["sub"] = user.ID
 	claims["email"] = user.Email
 	claims["iat"] = time.Now().Unix()
-	claims["exp"] = time.Now().Add(duration).Unix()
+	claims["exp"] = time.Now().Add(j.ttl).Unix()
 	claims["role"] = role
 	claims["scope"] = strings.Join(scope, " ")
 

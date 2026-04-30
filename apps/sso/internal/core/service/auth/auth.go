@@ -5,22 +5,30 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/core/domain"
+	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/core/domain/models"
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/core/domain/permissions"
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/ports/driven"
-	"github.com/Kaptoshka/creative-learning-platform/sso-service/pkg/jwt"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+type TokenService interface {
+	GenerateNewToken(
+		user models.User,
+		app models.App,
+		role string,
+		scope []string,
+	) (string, error)
+}
 
 type authService struct {
 	log      *slog.Logger
 	appRepo  driven.AppRepo
 	roleRepo driven.RoleRepo
 	userRepo driven.UserRepo
-	tokenTTL time.Duration
+	tokens   TokenService
 }
 
 // New returns a new instance of authService
@@ -29,14 +37,14 @@ func New(
 	appRepo driven.AppRepo,
 	roleRepo driven.RoleRepo,
 	userRepo driven.UserRepo,
-	tokenTTL time.Duration,
+	tokens TokenService,
 ) authService {
 	return authService{
 		log:      log,
 		appRepo:  appRepo,
 		roleRepo: roleRepo,
 		userRepo: userRepo,
-		tokenTTL: tokenTTL,
+		tokens:   tokens,
 	}
 }
 
@@ -115,7 +123,7 @@ func (a *authService) Login(
 
 	log.Debug("user permission scope found")
 
-	token, err := jwt.GenerateNewToken(user, app, a.tokenTTL, role, scope)
+	token, err := a.tokens.GenerateNewToken(user, app, role, scope)
 	if err != nil {
 		a.log.Error("failed to generate token", slog.Any("error", err))
 

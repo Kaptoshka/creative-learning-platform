@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	jwtManager "github.com/Kaptoshka/creative-learning-platform/sso-service/internal/adapters/driven/jwt"
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/adapters/driven/postgres"
 	grpcapp "github.com/Kaptoshka/creative-learning-platform/sso-service/internal/adapters/driving/grpc"
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/core/service/auth"
@@ -26,7 +27,9 @@ func New(
 		return nil
 	}
 
-	authService := auth.New(log, &client.AppRepo, &client.RoleRepo, &client.UserRepo, tokenTTL)
+	jwt := jwtManager.New(tokenTTL)
+
+	authService := auth.New(log, &client.AppRepo, &client.RoleRepo, &client.UserRepo, jwt)
 
 	grpcApp := grpcapp.New(log, &authService, grpcPort)
 
