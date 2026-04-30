@@ -7,7 +7,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1;assignments1";
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1;assignmentsv1";
 
 // --- Enums ---
 
