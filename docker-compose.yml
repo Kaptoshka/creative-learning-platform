@@ -4,6 +4,11 @@ x-assignments-build: &assignments-build
         context: .
         dockerfile: apps/assignments/Dockerfile
 
+x-sso-build: &sso-build
+    build:
+        context: .
+        dockerfile: apps/sso/Dockerfile
+
 services:
     postgres:
         image: postgres:18-alpine
@@ -30,10 +35,24 @@ services:
         networks:
             - backend
 
+    migrate-sso:
+        <<: *sso-build
+        container_name: migrate-sso
+        env_file:
+            - apps/sso/.env
+        environment:
+            DB_HOST: postgres
+            DB_PORT: 5432
+            MIGRATIONS_PATH: /migrations
+        entrypoint: ["/bin/migrator"]
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - backend
+
     sso-service:
-        build:
-            context: .
-            dockerfile: apps/sso/Dockerfile
+        <<: *sso-build
         container_name: sso-service
         env_file:
             - apps/sso/.env
@@ -41,13 +60,22 @@ services:
             CONFIG_PATH: /app/config/config.yaml
             DB_HOST: postgres
             DB_PORT: 5432
+        entrypoint: ["/bin/sso"]
         volumes:
             - ./apps/sso/config:/app/config:ro
         depends_on:
+            migrate-sso:
+                condition: service_completed_successfully
             postgres:
                 condition: service_healthy
         networks:
             - backend
+        healthcheck:
+            test: ["CMD", "/bin/grpc_health_probe", "-addr=:50052"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 5s
 
     migrate-assignments:
         <<: *assignments-build
@@ -62,6 +90,8 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+            migrate-sso:
+                condition: service_completed_successfully
         networks:
             - backend
 
@@ -84,7 +114,7 @@ services:
             postgres:
                 condition: service_healthy
             sso-service:
-                condition: service_started
+                condition: service_healthy
         networks:
             - backend
 
@@ -102,7 +132,7 @@ services:
         volumes:
             - ./apps/api-gateway/config:/app/config:ro
         ports:
-            - "8080:8080"
+            - "8000:8000"
         depends_on:
             assignment-service:
                 condition: service_started
