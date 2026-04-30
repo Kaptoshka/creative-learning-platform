@@ -2,6 +2,8 @@ package driving
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type AuthService interface {
@@ -9,8 +11,9 @@ type AuthService interface {
 		ctx context.Context,
 		email string,
 		password string,
-		appID int,
-	) (token string, err error)
+		appID uuid.UUID,
+	) (accessToken string, refreshToken string, err error)
+
 	RegisterNewUser(
 		ctx context.Context,
 		email string,
@@ -18,5 +21,30 @@ type AuthService interface {
 		firstName string,
 		lastName string,
 		middleName string,
-	) (userID int64, err error)
+	) (userID uuid.UUID, err error)
+
+	Logout(
+		ctx context.Context,
+		rawRefreshToken string,
+	) error
+
+	LogoutAll(
+		ctx context.Context,
+		userID uuid.UUID,
+	) error
+
+	RefreshToken(
+		ctx context.Context,
+		rawRefreshToken string,
+	) (accessToken string, refreshToken string, err error)
+
+	RegisterApp(
+		ctx context.Context,
+		name string,
+		secret string,
+		description string,
+	) (appID uuid.UUID, err error)
+
+	DeactivateApp(ctx context.Context, appID uuid.UUID) error
+	ActivateApp(ctx context.Context, appID uuid.UUID) error
 }

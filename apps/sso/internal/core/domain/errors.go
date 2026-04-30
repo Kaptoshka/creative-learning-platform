@@ -15,3 +15,11 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidAppID       = errors.New("invalid app id")
 )
+
+var (
+	ErrTokenNotFound = errors.New("refresh token not found")
+	ErrTokenExpired  = errors.New("refresh token expired")
+	ErrTokenRevoked  = errors.New("refresh token revoked")
+)
+
+var ErrAppExists = errors.New("app already exists")

@@ -12,12 +12,25 @@ type Config struct {
 	Env      string        `yaml:"env" env-default:"local"`
 	Database Database      `yaml:"database"`
 	TokenTTL time.Duration `yaml:"token_ttl" env-required:"true"`
+	RefreshTTL time.Duration `yaml:"refresh_ttl" env-required:"true"`
 	GRPC     GRPCConfig    `yaml:"grpc"`
+	HTTP       HTTPConfig    `yaml:"http"`
+	Signing    SigningConfig  `yaml:"signing"`
 }
 
 type GRPCConfig struct {
 	Port    int           `yaml:"port"`
 	Timeout time.Duration `yaml:"timeout"`
+}
+
+type HTTPConfig struct {
+	Address string `yaml:"address" env-default:":8080"`
+}
+
+type SigningConfig struct {
+	KeyPath string `yaml:"key_path" env:"SIGNING_KEY_PATH"`
+	KeyPEM  string `yaml:"-" env:"SIGNING_KEY_PEM"`
+	KeyID   string `yaml:"key_id" env-required:"true"`
 }
 
 type Database struct {

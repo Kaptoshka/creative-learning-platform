@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"log/slog"
 	"net"
@@ -8,6 +9,8 @@ import (
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/ports/driving"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type App struct {
@@ -21,8 +24,17 @@ func New(
 	log *slog.Logger,
 	authService driving.AuthService,
 	port int,
+	publicKey *rsa.PublicKey,
 ) *App {
-	gRPCServer := grpc.NewServer()
+	gRPCServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			AdminOnlyInterceptor(publicKey),
+		),
+	)
+
+	healthSrv := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(gRPCServer, healthSrv)
+	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	Register(gRPCServer, authService)
 

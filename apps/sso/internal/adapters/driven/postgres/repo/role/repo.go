@@ -2,12 +2,11 @@ package role
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/core/domain"
-
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -16,23 +15,19 @@ type RoleRepo struct {
 	pool *pgxpool.Pool
 }
 
-// New creates a new instance of RoleRepo.
-// That used to interact with the role and permission related tables.
 func New(pool *pgxpool.Pool) RoleRepo {
 	return RoleRepo{pool: pool}
 }
 
-// LinkUserRole links a user to a specific role.
 func (r *RoleRepo) LinkUserRole(
 	ctx context.Context,
-	userID int64,
-	roleID int64,
+	userID uuid.UUID,
+	roleID uuid.UUID,
 ) error {
 	const op = "adapters.driven.postgres.role.LinkUserRole"
 
-	query := `
-		INSERT INTO user_roles
-		(user_id, role_id)
+	const query = `
+		INSERT INTO user_roles (user_id, role_id)
 		VALUES (@user_id, @role_id)`
 
 	_, err := r.pool.Exec(ctx, query, pgx.NamedArgs{
@@ -40,50 +35,45 @@ func (r *RoleRepo) LinkUserRole(
 		"role_id": roleID,
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %v", op, err)
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil
 }
 
-// RoleID returns the ID of the role with the given name.
 func (r *RoleRepo) RoleID(
 	ctx context.Context,
 	role string,
-) (int64, error) {
+) (uuid.UUID, error) {
 	const op = "adapters.driven.postgres.role.RoleID"
 
-	query := `
+	const query = `
 		SELECT id
 		FROM roles
 		WHERE role = @role`
 
-	var roleID int64
+	var roleID uuid.UUID
 
 	err := r.pool.QueryRow(ctx, query, pgx.NamedArgs{
 		"role": role,
 	}).Scan(&roleID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, fmt.Errorf(
-				"%s: %v", op, domain.ErrRoleNotFound,
-			)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.Nil, fmt.Errorf("%s: %w", op, domain.ErrRoleNotFound)
 		}
-
-		return 0, fmt.Errorf("%s: %v", op, err)
+		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return roleID, nil
 }
 
-// UserRole returns the role of the user with the given ID.
 func (r *RoleRepo) UserRole(
 	ctx context.Context,
-	userID int64,
+	userID uuid.UUID, // ← было int64
 ) (string, error) {
 	const op = "adapters.driven.postgres.role.UserRole"
 
-	query := `
+	const query = `
 		SELECT r.role
 		FROM roles r
 		JOIN user_roles ur ON r.id = ur.role_id
@@ -95,25 +85,22 @@ func (r *RoleRepo) UserRole(
 		"user_id": userID,
 	}).Scan(&role)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", fmt.Errorf(
-				"%s: %v", op, domain.ErrRoleNotFound,
-			)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", fmt.Errorf("%s: %w", op, domain.ErrRoleNotFound)
 		}
-		return "", fmt.Errorf("%s: %v", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	return role, nil
 }
 
-// Scope returns the permission scope of the user with the given ID.
 func (r *RoleRepo) Scope(
 	ctx context.Context,
-	userID int64,
+	userID uuid.UUID,
 ) ([]string, error) {
 	const op = "adapters.driven.postgres.role.Scope"
 
-	query := `
+	const query = `
 		SELECT p.slug
 		FROM permissions p
 		JOIN role_permissions rp ON p.id = rp.permission_id
@@ -124,7 +111,7 @@ func (r *RoleRepo) Scope(
 		"user_id": userID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer rows.Close()
 

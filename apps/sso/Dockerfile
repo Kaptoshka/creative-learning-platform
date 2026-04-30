@@ -26,15 +26,20 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /workspace
 
-COPY go.work go.work.sum ./
+COPY go.work* ./
 
 COPY libs/protos/go.mod libs/protos/go.mod
 COPY --from=proto-gen /workspace/libs/protos/gen/ libs/protos/gen/
 
 COPY apps/sso/go.mod apps/sso/go.mod ./apps/sso/
-RUN cd apps/assignments && go mod download
+RUN cd apps/sso && go mod download
 
 COPY apps/sso/ apps/sso/
+
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.28 && \
+    wget -qO /bin/grpc_health_probe \
+    https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 && \
+    chmod +x /bin/grpc_health_probe
 
 RUN cd apps/sso && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-s -w" -trimpath \
@@ -51,7 +56,9 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /bin/sso /bin/sso
 COPY --from=builder /bin/migrator /bin/migrator
 COPY --from=builder /workspace/apps/sso/migrations /migrations
+COPY --from=builder /bin/grpc_health_probe /bin/grpc_health_probe
 
 EXPOSE 50052
+EXPOSE 8081
 
 ENTRYPOINT ["/bin/sso"]

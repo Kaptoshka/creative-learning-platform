@@ -5,7 +5,9 @@ import (
 )
 
 type App struct {
-	ID     uuid.UUID
-	Name   string
-	Secret string
+	ID          uuid.UUID
+	Name        string
+	Secret      string
+	Description string
+	IsActive    bool
 }

@@ -2,13 +2,13 @@ package user
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/core/domain"
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/core/domain/models"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	pgConn "github.com/jackc/pgx/v5/pgconn"
@@ -33,7 +33,7 @@ func (r *UserRepo) SaveUser(
 	firstName string,
 	lastName string,
 	middleName string,
-) (int64, error) {
+) (uuid.UUID, error) {
 	const op = "adapters.driven.postgres.user.SaveUser"
 
 	const query = `
@@ -51,7 +51,7 @@ func (r *UserRepo) SaveUser(
 			@middle_name
 		) RETURNING id`
 
-	var id int64
+	var id uuid.UUID
 
 	err := r.pool.QueryRow(ctx, query, pgx.NamedArgs{
 		"email":       email,
@@ -63,9 +63,9 @@ func (r *UserRepo) SaveUser(
 	if err != nil {
 		var pgErr *pgConn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return 0, fmt.Errorf("%s: %v", op, domain.ErrUserExists)
+			return uuid.Nil, fmt.Errorf("%s: %v", op, domain.ErrUserExists)
 		}
-		return 0, fmt.Errorf("%s: %v", op, err)
+		return uuid.Nil, fmt.Errorf("%s: %v", op, err)
 	}
 
 	return id, nil
@@ -102,13 +102,52 @@ func (r *UserRepo) User(
 		&user.MiddleName,
 	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return models.User{}, fmt.Errorf(
 				"%s: %v", op, domain.ErrUserNotFound,
 			)
 		}
 
 		return models.User{}, fmt.Errorf("%s: %v", op, err)
+	}
+
+	return user, nil
+}
+
+func (r *UserRepo) UserByID(
+	ctx context.Context,
+	userID uuid.UUID,
+) (models.User, error) {
+	const op = "adapters.driven.postgres.user.UserByID"
+
+	const query = `
+		SELECT
+			id,
+			email,
+			pass_hash,
+			first_name,
+			last_name,
+			middle_name
+		FROM users
+		WHERE id = @id`
+
+	var user models.User
+
+	err := r.pool.QueryRow(ctx, query, pgx.NamedArgs{
+		"id": userID,
+	}).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PassHash,
+		&user.FirstName,
+		&user.LastName,
+		&user.MiddleName,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.User{}, fmt.Errorf("%s: %w", op, domain.ErrUserNotFound)
+		}
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return user, nil

@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/adapters/driven/postgres/repo/app"
+	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/adapters/driven/postgres/repo/group"
+	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/adapters/driven/postgres/repo/refresh"
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/adapters/driven/postgres/repo/role"
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/adapters/driven/postgres/repo/user"
 
@@ -16,6 +18,8 @@ type Storage struct {
 	app.AppRepo
 	role.RoleRepo
 	user.UserRepo
+	group.GroupRepo
+	refresh.RefreshRepo
 }
 
 // New creates a new instance of PostgreSQL storage
@@ -38,10 +42,12 @@ func New(connString string) (*Storage, error) {
 	}
 
 	return &Storage{
-		pool:     pool,
-		AppRepo:  app.New(pool),
-		RoleRepo: role.New(pool),
-		UserRepo: user.New(pool),
+		pool:        pool,
+		AppRepo:     app.New(pool),
+		RoleRepo:    role.New(pool),
+		UserRepo:    user.New(pool),
+		GroupRepo:   group.New(pool),
+		RefreshRepo: refresh.New(pool),
 	}, nil
 }
 
