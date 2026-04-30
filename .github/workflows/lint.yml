@@ -7,12 +7,50 @@ on:
     pull_request:
         branches: [main, master]
 
+concurrency:
+    group: lint-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
+    changes:
+        runs-on: ubuntu-latest
+        permissions:
+            pull-requests: read
+        outputs:
+            go: ${{ steps.filter.outputs.go }}
+            nix: ${{ steps.filter.outputs.nix }}
+            yaml: ${{ steps.filter.outputs.yaml }}
+            protos: ${{ steps.filter.outputs.protos }}
+            docker: ${{ steps.filter.outputs.docker }}
+            compose: ${{ steps.filter.outputs.compose }}
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: dorny/paths-filter@v4
+              id: filter
+              with:
+                  filters: |
+                      go:
+                          - '**/*.go'
+                      nix:
+                          - '**/*.nix'
+                      yaml:
+                          - '**/*.yaml'
+                          - '**/*.yml'
+                      protos:
+                          - '**/*.proto'
+                      docker:
+                          - '**/Dockerfile*'
+                      compose:
+                          - 'docker-compose*.yml'
+
     lint-go:
-        name: Go
+        name: Lint Go files
+        needs: changes
+        if: ${{ needs.changes.outputs.go == 'true' }}
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
             - uses: actions/setup-go@v6
               with:
                   go-version-file: go.mod
@@ -25,9 +63,11 @@ jobs:
 
     lint-nix:
         name: Nix
+        needs: changes
+        if: ${{ needs.changes.outputs.nix == 'true' }}
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
             - uses: DeterminateSystems/nix-installer-action@v14
 
             - name: nixpkgs-fmt -- format
@@ -41,9 +81,11 @@ jobs:
 
     lint-yaml:
         name: YAML
+        needs: changes
+        if: ${{ needs.changes.outputs.yaml == 'true' }}
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
             - name: yamllint
               uses: ibiqlik/action-yamllint@v3
@@ -54,11 +96,42 @@ jobs:
 
     lint-protos:
         name: Buf
+        needs: changes
+        if: ${{ needs.changes.outputs.protos == 'true' }}
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v6
 
-            - uses: bufbuild/buf-setup-action@v1
-            - uses: bufbuild/buf-lint-action@v1
+            - uses: bufbuild/buf-setup-action@v1.50.0
+            - uses: bufbuild/buf-lint-action@v1.1.1
               with:
                   input: "libs/protos"
+
+    lint-dockerfile:
+        name: Dockerfile (hadoling)
+        needs: changes
+        if: ${{ needs.changes.outputs.docker == 'true' }}
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Run hadolint
+              uses: hadolint/hadolint-action@v3.1.0
+              with:
+                  config: .hadolint.yml
+                  recursive: true
+                  dockerfile: ${{ steps.files.outputs.files }}
+
+    lint-compose:
+        name: docker-compose
+        needs: changes
+        if: ${{ needs.changes.outputs.compose == 'true' }}
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Validate docker-compose.yml
+              run: docker compose -f docker-compose.yml config
+
+            - name: Validate docker-compose.dev.yml
+              run: docker compose -f docker-compose.dev.yml config
