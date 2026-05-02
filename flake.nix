@@ -6,8 +6,13 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { nixpkgs, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    { nixpkgs
+    , flake-utils
+    , ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
@@ -51,31 +56,32 @@
           ${pkgs.docker}/bin/docker compose -f docker-compose.yml config
           ${pkgs.docker}/bin/docker compose -f docker-compose.dev.yml config
         '';
-
       in
       {
-        checks.default = pkgs.runCommand "ci-check" {} ''
-          set -e
+        checks = {
+          default = pkgs.runCommand "ci-check" { } ''
+            set -e
 
-          echo "Running full CI checks..."
+            echo "Running full CI checks..."
 
-          ${goCheck}/bin/go-check
-          ${nixCheck}/bin/nix-check
-          ${yamlCheck}/bin/yaml-check
-          ${protoCheck}/bin/proto-check
-          ${dockerCheck}/bin/docker-check
-          ${composeCheck}/bin/compose-check
+            ${goCheck}/bin/go-check
+            ${nixCheck}/bin/nix-check
+            ${yamlCheck}/bin/yaml-check
+            ${protoCheck}/bin/proto-check
+            ${dockerCheck}/bin/docker-check
+            ${composeCheck}/bin/compose-check
 
-          echo "All checks passed"
-          touch $out
-        '';
+            echo "All checks passed"
+            touch $out
+          '';
 
-        checks.go = goCheck;
-        checks.nix = nixCheck;
-        checks.yaml = yamlCheck;
-        checks.proto = protoCheck;
-        checks.docker = dockerCheck;
-        checks.compose = composeCheck;
+          go = goCheck;
+          nix = nixCheck;
+          yaml = yamlCheck;
+          proto = protoCheck;
+          docker = dockerCheck;
+          compose = composeCheck;
+        };
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
