@@ -4,7 +4,6 @@ lint:
         - STANDARD
     except:
         - PACKAGE_VERSION_SUFFIX
-        - PACKAGE_DIRECTORY_MATCH
 breaking:
     use:
         - FILE

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sso.v1;
 
-option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/sso/v1;ssov1";
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/sso/v1;ssov1";
 
 service AuthService {
     rpc Register(RegisterRequest) returns (RegisterResponse);
