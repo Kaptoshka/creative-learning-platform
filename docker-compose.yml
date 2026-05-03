@@ -71,7 +71,7 @@ services:
         networks:
             - backend
         healthcheck:
-            test: ["CMD", "/bin/grpc_health_probe", "-addr=:50052"]
+            test: ["CMD", "/bin/grpc_health_probe", "-addr=:50051"]
             interval: 10s
             timeout: 5s
             retries: 5
@@ -118,19 +118,19 @@ services:
         networks:
             - backend
 
-    api-gateway:
+    gateway-service:
         build:
             context: .
-            dockerfile: apps/api-gateway/Dockerfile
-        container_name: api-gateway
+            dockerfile: apps/gateway/Dockerfile
+        container_name: gateway-service
         env_file:
-            - apps/api-gateway/.env
+            - apps/gateway/.env
         environment:
             CONFIG_PATH: /app/config/config.yaml
-            ASSIGNMENT_SERVICE_ADDR: assignment-service:50051
-            SSO_SERVICE_ADDR: sso-service:50052
+            ASSIGNMENT_SERVICE_ADDR: assignment-service:50052
+            SSO_SERVICE_ADDR: sso-service:50051
         volumes:
-            - ./apps/api-gateway/config:/app/config:ro
+            - ./apps/gateway/config:/app/config:ro
         ports:
             - "8000:8000"
         depends_on:
@@ -150,11 +150,11 @@ services:
         env_file:
             - frontend/.env
         environment:
-            API_URL: http://api-gateway:8080
+            API_URL: http://gateway-service:8000
         ports:
             - "3000:3000"
         depends_on:
-            - api-gateway
+            - gateway-service
         networks:
             - frontend
 

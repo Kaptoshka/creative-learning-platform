@@ -16,7 +16,7 @@ lint:
 .PHONY: lint-go
 lint-go:
 	@echo "==> Linting Go..."
-	@$(GO_LINT) run --config=.golangci.yml ./apps/sso/...
+	@$(GO_LINT) run --config=.golangci.yml ./apps/sso/... ./apps/gateway/...
 
 .PHONY: lint-nix
 lint-nix:
