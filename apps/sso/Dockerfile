@@ -64,7 +64,7 @@ COPY --from=builder /bin/migrator /bin/migrator
 COPY --from=builder /workspace/apps/sso/migrations /migrations
 COPY --from=builder /bin/grpc_health_probe /bin/grpc_health_probe
 
-EXPOSE 50052
-EXPOSE 8081
+EXPOSE 50051
+EXPOSE 8080
 
 ENTRYPOINT ["/bin/sso"]

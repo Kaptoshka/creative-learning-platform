@@ -58,6 +58,6 @@ COPY --from=builder /bin/assignments /bin/assignments
 COPY --from=builder /bin/migrator /bin/migrator
 COPY --from=builder /workspace/apps/assignments/migrations /migrations
 
-EXPOSE 50051
+EXPOSE 50052
 
 ENTRYPOINT ["/bin/assignments"]

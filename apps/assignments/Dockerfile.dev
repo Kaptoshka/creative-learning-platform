@@ -44,7 +44,7 @@ COPY apps/assignments/go.mod apps/assignments/go.sum ./apps/assignments/
 WORKDIR /workspace/apps/assignments
 RUN go mod download
 
-EXPOSE 50051
+EXPOSE 50052
 EXPOSE 2345
 
 CMD ["sh", "-c", "go mod download && air -c .air.toml"]
