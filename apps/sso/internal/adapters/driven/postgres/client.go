@@ -14,31 +14,31 @@ import (
 )
 
 type Storage struct {
-	pool *pgxpool.Pool
-	app.AppRepo
-	role.RoleRepo
-	user.UserRepo
-	group.GroupRepo
-	refresh.RefreshRepo
+	pool        *pgxpool.Pool
+	AppRepo     app.Repo
+	RoleRepo    role.Repo
+	UserRepo    user.Repo
+	GroupRepo   group.Repo
+	RefreshRepo refresh.Repo
 }
 
-// New creates a new instance of PostgreSQL storage
+// New creates a new instance of PostgreSQL storage.
 func New(connString string) (*Storage, error) {
 	const op = "storage.postgres.New"
 
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	if err := pool.Ping(context.Background()); err != nil {
+	if err = pool.Ping(context.Background()); err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("%s: %v", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return &Storage{

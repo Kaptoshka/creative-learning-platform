@@ -7,7 +7,7 @@ import (
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/core/domain"
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/ports/driving"
 
-	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/sso/v1"
+	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/sso/v1"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -15,12 +15,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const (
-	emptyValue = 0
-)
-
 type serverAPI struct {
 	ssov1.UnimplementedAuthServiceServer
+
 	auth driving.AuthService
 }
 
@@ -28,7 +25,7 @@ func Register(gRPC *grpc.Server, auth driving.AuthService) {
 	ssov1.RegisterAuthServiceServer(gRPC, &serverAPI{auth: auth})
 }
 
-// Login implements login of the user in SSO
+// Login implements login of the user in SSO.
 func (s *serverAPI) Login(
 	ctx context.Context,
 	req *ssov1.LoginRequest,
@@ -65,7 +62,7 @@ func (s *serverAPI) Login(
 	}, nil
 }
 
-// Register implements registration of the user in SSO
+// Register implements registration of the user in SSO.
 func (s *serverAPI) Register(
 	ctx context.Context,
 	req *ssov1.RegisterRequest,
@@ -156,7 +153,7 @@ func (s *serverAPI) LogoutAll(
 		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid UUID")
 	}
 
-	if err := s.auth.LogoutAll(ctx, userID); err != nil {
+	if err = s.auth.LogoutAll(ctx, userID); err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			return nil, status.Error(codes.NotFound, "user not found")
 		}
@@ -198,7 +195,7 @@ func (s *serverAPI) DeactivateApp(
 		return nil, status.Error(codes.InvalidArgument, "app_id must be a valid UUID")
 	}
 
-	if err := s.auth.DeactivateApp(ctx, appID); err != nil {
+	if err = s.auth.DeactivateApp(ctx, appID); err != nil {
 		return nil, status.Error(codes.Internal, "failed to deactivate app")
 	}
 

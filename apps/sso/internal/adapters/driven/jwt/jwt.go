@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type JWTService struct {
+type Service struct {
 	ttl        time.Duration
 	privateKey *rsa.PrivateKey
 	keyID      string
@@ -24,8 +25,8 @@ func New(
 	ttl time.Duration,
 	privateKey *rsa.PrivateKey,
 	keyID string,
-) *JWTService {
-	return &JWTService{
+) *Service {
+	return &Service{
 		ttl:        ttl,
 		privateKey: privateKey,
 		keyID:      keyID,
@@ -34,7 +35,7 @@ func New(
 
 // GenerateNewToken generates a new JWT token
 // for the given user, app, duration, role, and permission scope.
-func (j *JWTService) GenerateNewToken(
+func (j *Service) GenerateNewToken(
 	user models.User,
 	role string,
 	scope []string,
@@ -44,7 +45,7 @@ func (j *JWTService) GenerateNewToken(
 
 	token.Header["kid"] = j.keyID
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, _ := token.Claims.(jwt.MapClaims)
 
 	now := time.Now()
 
@@ -65,18 +66,18 @@ func (j *JWTService) GenerateNewToken(
 	return token.SignedString(j.privateKey)
 }
 
-func (j *JWTService) PublicKey() *rsa.PublicKey {
+func (j *Service) PublicKey() *rsa.PublicKey {
 	return &j.privateKey.PublicKey
 }
 
-func (j *JWTService) KeyID() string {
+func (j *Service) KeyID() string {
 	return j.keyID
 }
 
 func ParseRSAPrivateKey(pemBytes []byte) (*rsa.PrivateKey, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
+		return nil, errors.New("failed to decode PEM block")
 	}
 
 	switch block.Type {
@@ -89,7 +90,7 @@ func ParseRSAPrivateKey(pemBytes []byte) (*rsa.PrivateKey, error) {
 		}
 		rsaKey, ok := key.(*rsa.PrivateKey)
 		if !ok {
-			return nil, fmt.Errorf("PKCS8 key is not RSA")
+			return nil, errors.New("PKCS8 key is not RSA")
 		}
 		return rsaKey, nil
 	default:

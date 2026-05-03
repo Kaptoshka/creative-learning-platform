@@ -1,10 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/app"
@@ -24,16 +26,18 @@ func main() {
 
 	log.Info("starting application")
 
-	connString := fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		cfg.Database.User,
-		cfg.Database.Password,
-		cfg.Database.Host,
-		cfg.Database.Port,
-		cfg.Database.Name,
-		cfg.Database.SSLMode,
-	)
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(cfg.Database.User, cfg.Database.Password),
+		Host:   net.JoinHostPort(cfg.Database.Host, strconv.Itoa(cfg.Database.Port)),
+		Path:   cfg.Database.Name,
+	}
 
+	q := u.Query()
+	q.Set("sslmode", cfg.Database.SSLMode)
+	u.RawQuery = q.Encode()
+
+	connString := u.String()
 	privateKeyPEM := mustLoadSigningKey(cfg.Signing)
 
 	application, err := app.New(
@@ -54,7 +58,7 @@ func main() {
 	go application.GRPCServer.MustRun()
 
 	go func() {
-		if err := application.HTTPServer.Run(); err != nil {
+		if err = application.HTTPServer.Run(); err != nil {
 			log.Error("http server failed", slog.Any("error", err))
 			os.Exit(1)
 		}

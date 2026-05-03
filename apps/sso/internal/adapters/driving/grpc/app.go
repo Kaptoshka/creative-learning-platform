@@ -1,10 +1,12 @@
 package grpc
 
 import (
+	"context"
 	"crypto/rsa"
 	"fmt"
 	"log/slog"
 	"net"
+	"strconv"
 
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/internal/ports/driving"
 
@@ -45,7 +47,7 @@ func New(
 	}
 }
 
-// MustRun run gRPC server and panic if error occurs
+// MustRun run gRPC server and panic if error occurs.
 func (a *App) MustRun() {
 	if err := a.Run(); err != nil {
 		a.log.Error("failed to run app", "error", err)
@@ -53,7 +55,8 @@ func (a *App) MustRun() {
 	}
 }
 
-// Run runs gRPC server
+// Run runs gRPC and HTTP server.
+// TODO: Separate to two functions.
 func (a *App) Run() error {
 	const op = "grpcapp.Run"
 
@@ -62,20 +65,21 @@ func (a *App) Run() error {
 		slog.Int("port", a.port),
 	)
 
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
+	lc := net.ListenConfig{}
+	l, err := lc.Listen(context.Background(), "tcp", ":"+strconv.Itoa(a.port))
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	log.Info("gRPC server is running")
-	if err := a.gRPCServer.Serve(l); err != nil {
+	if err = a.gRPCServer.Serve(l); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil
 }
 
-// Stop stops gRPC server
+// Stop stops gRPC server.
 func (a *App) Stop() {
 	const op = "grpcapp.Stop"
 

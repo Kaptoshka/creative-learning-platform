@@ -27,32 +27,26 @@ const (
 	ScopeWidgetsWrite = "widgets:write"
 )
 
-var RoleScopes = map[string][]string{
-	RoleAdmin: {
-		ScopeAssignmentsRead,
-		ScopeAssignmentsWrite,
-		ScopeAssignmentsDelete,
-		ScopeSubmissionsCreate,
-		ScopeSubmissionsRead,
-		ScopeFeedbackRead,
-		ScopeFeedbackWrite,
-		ScopeWidgetsRead,
-		ScopeWidgetsWrite,
-	},
-	RoleTeacher: {
-		ScopeAssignmentsRead,
-		ScopeAssignmentsWrite,
-		ScopeAssignmentsDelete,
-		ScopeSubmissionsRead,
-		ScopeFeedbackRead,
-		ScopeFeedbackWrite,
-		ScopeWidgetsRead,
-	},
-	RoleStudent: {
-		ScopeAssignmentsRead,
-		ScopeSubmissionsCreate,
-		ScopeSubmissionsRead,
-		ScopeFeedbackRead,
-		ScopeWidgetsRead,
-	},
+func GetScopesForRole(role string) []string {
+	switch role {
+	case RoleAdmin:
+		return []string{
+			ScopeAssignmentsRead, ScopeAssignmentsWrite, ScopeAssignmentsDelete,
+			ScopeSubmissionsCreate, ScopeSubmissionsRead, ScopeFeedbackRead,
+			ScopeFeedbackWrite, ScopeWidgetsRead, ScopeWidgetsWrite,
+		}
+	case RoleTeacher:
+		return []string{
+			ScopeAssignmentsRead, ScopeAssignmentsWrite, ScopeAssignmentsDelete,
+			ScopeSubmissionsRead, ScopeFeedbackRead, ScopeFeedbackWrite,
+			ScopeWidgetsRead,
+		}
+	case RoleStudent:
+		return []string{
+			ScopeAssignmentsRead, ScopeSubmissionsCreate, ScopeSubmissionsRead,
+			ScopeFeedbackRead, ScopeWidgetsRead,
+		}
+	default:
+		return nil
+	}
 }

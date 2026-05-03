@@ -9,13 +9,13 @@ import (
 )
 
 type Config struct {
-	Env      string        `yaml:"env" env-default:"local"`
-	Database Database      `yaml:"database"`
-	TokenTTL time.Duration `yaml:"token_ttl" env-required:"true"`
-	RefreshTTL time.Duration `yaml:"refresh_ttl" env-required:"true"`
-	GRPC     GRPCConfig    `yaml:"grpc"`
+	Env        string        `yaml:"env"         env-default:"local"`
+	Database   Database      `yaml:"database"`
+	TokenTTL   time.Duration `yaml:"token_ttl"                       env-required:"true"`
+	RefreshTTL time.Duration `yaml:"refresh_ttl"                     env-required:"true"`
+	GRPC       GRPCConfig    `yaml:"grpc"`
 	HTTP       HTTPConfig    `yaml:"http"`
-	Signing    SigningConfig  `yaml:"signing"`
+	Signing    SigningConfig `yaml:"signing"`
 }
 
 type GRPCConfig struct {
@@ -29,17 +29,17 @@ type HTTPConfig struct {
 
 type SigningConfig struct {
 	KeyPath string `yaml:"key_path" env:"SIGNING_KEY_PATH"`
-	KeyPEM  string `yaml:"-" env:"SIGNING_KEY_PEM"`
-	KeyID   string `yaml:"key_id" env-required:"true"`
+	KeyPEM  string `yaml:"-"        env:"SIGNING_KEY_PEM"`
+	KeyID   string `yaml:"key_id"                          env-required:"true"`
 }
 
 type Database struct {
-	Host     string `yaml:"host" env-required:"true"`
-	Port     int    `yaml:"port" env-required:"true"`
-	User     string `yaml:"user" env-required:"true"`
+	Host     string `yaml:"host"     env-required:"true"`
+	Port     int    `yaml:"port"     env-required:"true"`
+	User     string `yaml:"user"     env-required:"true"`
 	Password string `yaml:"password" env-required:"true"`
-	Name     string `yaml:"name" env-required:"true"`
-	SSLMode  string `yaml:"sslmode" env-default:"disable"`
+	Name     string `yaml:"name"     env-required:"true"`
+	SSLMode  string `yaml:"sslmode"                      env-default:"disable"`
 }
 
 // MustLoad retrive path to config
@@ -71,7 +71,7 @@ func MustLoadByPath(path string) *Config {
 
 // fetchConfigPath fetches config path from command line flag or environment variable
 // Priority: flag > env > default
-// Default value: is empty string
+// Default value: is empty string.
 func fetchConfigPath() string {
 	var res string
 

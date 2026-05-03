@@ -12,13 +12,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var adminMethods = map[string]bool{
-	"/sso.v1.AuthService/RegisterApp":   true,
-	"/sso.v1.AuthService/DeactivateApp": true,
-	"/sso.v1.AuthService/ActivateApp":   true,
-}
-
 func AdminOnlyInterceptor(publicKey *rsa.PublicKey) grpc.UnaryServerInterceptor {
+	adminMethods := map[string]bool{
+		"/sso.v1.AuthService/RegisterApp":   true,
+		"/sso.v1.AuthService/DeactivateApp": true,
+		"/sso.v1.AuthService/ActivateApp":   true,
+	}
 	return func(
 		ctx context.Context,
 		req any,
@@ -59,7 +58,8 @@ func extractToken(ctx context.Context) (string, error) {
 		return "", status.Error(codes.Unauthenticated, "authorization header is required")
 	}
 
-	parts := strings.SplitN(values[0], " ", 2)
+	half := 2
+	parts := strings.SplitN(values[0], " ", half)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
 		return "", status.Error(codes.Unauthenticated, "authorization header must be Bearer <token>")
 	}

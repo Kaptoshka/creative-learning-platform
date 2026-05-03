@@ -27,7 +27,7 @@ type jwks struct {
 }
 
 func newJWKSHandler(provider JWKSProvider) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		pub := provider.PublicKey()
 
 		key := jwk{

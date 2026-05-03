@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 type Server struct {
@@ -17,11 +18,20 @@ func New(log *slog.Logger, addr string, provider JWKSProvider) *Server {
 
 	mux.HandleFunc("GET /.well-known/jwks.json", newJWKSHandler(provider))
 
+	readHeaderSeconds := 5
+	readWriteTimeoutSeconds := 10
+	idleTimeoutSeconds := 120
+
 	return &Server{
 		log: log,
 		server: &http.Server{
-			Addr:    addr,
-			Handler: mux,
+			Addr:              addr,
+			Handler:           mux,
+			ReadHeaderTimeout: time.Duration(readHeaderSeconds) * time.Second,
+
+			ReadTimeout:  time.Duration(readWriteTimeoutSeconds) * time.Second,
+			WriteTimeout: time.Duration(readWriteTimeoutSeconds) * time.Second,
+			IdleTimeout:  time.Duration(idleTimeoutSeconds) * time.Second,
 		},
 	}
 }
@@ -37,6 +47,6 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	s.log.Info("stopping http server")
+	s.log.InfoContext(ctx, "stopping http server")
 	return s.server.Shutdown(ctx)
 }

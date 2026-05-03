@@ -9,15 +9,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type GroupRepo struct {
+type Repo struct {
 	pool *pgxpool.Pool
 }
 
-func New(pool *pgxpool.Pool) GroupRepo {
-	return GroupRepo{pool: pool}
+func New(pool *pgxpool.Pool) Repo {
+	return Repo{pool: pool}
 }
 
-func (r *GroupRepo) UserGroups(
+func (r *Repo) UserGroups(
 	ctx context.Context,
 	userID uuid.UUID,
 ) ([]uuid.UUID, error) {
@@ -40,13 +40,13 @@ func (r *GroupRepo) UserGroups(
 
 	for rows.Next() {
 		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
+		if err = rows.Scan(&id); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 		groupIDs = append(groupIDs, id)
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 

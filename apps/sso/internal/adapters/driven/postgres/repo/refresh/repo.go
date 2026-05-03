@@ -13,15 +13,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type RefreshRepo struct {
+type Repo struct {
 	pool *pgxpool.Pool
 }
 
-func New(pool *pgxpool.Pool) RefreshRepo {
-	return RefreshRepo{pool: pool}
+func New(pool *pgxpool.Pool) Repo {
+	return Repo{pool: pool}
 }
 
-func (r *RefreshRepo) Save(
+func (r *Repo) Save(
 	ctx context.Context,
 	userID uuid.UUID,
 	tokenHash string,
@@ -54,7 +54,7 @@ func (r *RefreshRepo) Save(
 	return id, nil
 }
 
-func (r *RefreshRepo) ByHash(
+func (r *Repo) ByHash(
 	ctx context.Context,
 	tokenHash string,
 ) (models.RefreshToken, error) {
@@ -93,7 +93,7 @@ func (r *RefreshRepo) ByHash(
 	return token, nil
 }
 
-func (r *RefreshRepo) Revoke(
+func (r *Repo) Revoke(
 	ctx context.Context,
 	tokenID uuid.UUID,
 ) error {
@@ -115,7 +115,7 @@ func (r *RefreshRepo) Revoke(
 	return nil
 }
 
-func (r *RefreshRepo) RevokeAll(
+func (r *Repo) RevokeAll(
 	ctx context.Context,
 	userID uuid.UUID,
 ) error {
@@ -137,7 +137,7 @@ func (r *RefreshRepo) RevokeAll(
 	return nil
 }
 
-func (r *RefreshRepo) DeleteExpired(ctx context.Context) error {
+func (r *Repo) DeleteExpired(ctx context.Context) error {
 	const op = "adapters.driven.postgres.refresh.DeleteExpired"
 
 	const query = `

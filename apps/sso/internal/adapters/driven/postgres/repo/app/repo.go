@@ -15,18 +15,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type AppRepo struct {
+type Repo struct {
 	pool *pgxpool.Pool
 }
 
 // New creates a new instance of AppRepo.
 // That used to interact with the app table.
-func New(pool *pgxpool.Pool) AppRepo {
-	return AppRepo{pool: pool}
+func New(pool *pgxpool.Pool) Repo {
+	return Repo{pool: pool}
 }
 
 // App returns the app with the given ID.
-func (r *AppRepo) App(
+func (r *Repo) App(
 	ctx context.Context,
 	appID uuid.UUID,
 ) (models.App, error) {
@@ -64,7 +64,7 @@ func (r *AppRepo) App(
 	return app, nil
 }
 
-func (r *AppRepo) DeactivateApp(
+func (r *Repo) DeactivateApp(
 	ctx context.Context,
 	appID uuid.UUID,
 ) error {
@@ -85,7 +85,7 @@ func (r *AppRepo) DeactivateApp(
 	return nil
 }
 
-func (r *AppRepo) ActivateApp(
+func (r *Repo) ActivateApp(
 	ctx context.Context,
 	appID uuid.UUID,
 ) error {
@@ -106,7 +106,7 @@ func (r *AppRepo) ActivateApp(
 	return nil
 }
 
-func (r *AppRepo) RegisterApp(
+func (r *Repo) RegisterApp(
 	ctx context.Context,
 	name string,
 	secret string,

@@ -5,6 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
+	"net"
+	"net/url"
 	"os"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -13,6 +16,10 @@ import (
 )
 
 func main() {
+	log := slog.New(
+		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+	)
+
 	connString, migrationsPath, migrationsTable := fetchMigratorPaths()
 
 	m, err := migrate.New(
@@ -20,25 +27,25 @@ func main() {
 		fmt.Sprintf("%s&x-migrations-table=%s", connString, migrationsTable),
 	)
 	if err != nil {
-		log.Fatalf("failed to create migrator: %v", err)
+		log.Error("failed to create migrator: %v", slog.Any("error", err))
 	}
 	defer m.Close()
 
-	if err := m.Up(); err != nil {
+	if err = m.Up(); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			fmt.Printf("no migrations to apply")
+			log.Info("no migrations to apply")
 			return
 		}
-		log.Fatalf("failed to apply migrations: %v", err)
+		log.Error("failed to apply migrations: %v", slog.Any("error", err))
 	}
 
-	fmt.Println("migrations applied successfully")
+	log.Info("migrations applied successfully")
 }
 
 // fetchMigratorPaths fetches the paths for the migration, migrations table and env for connString.
 // Priority: flag > env > default
 // connString and migrationPath cannot be empty
-// Default value: migrationPath: , migrationsTable: "migrations"
+// Default value: migrationPath: , migrationsTable: "migrations".
 func fetchMigratorPaths() (string, string, string) {
 	var migrationsPath, migrationsTable string
 
@@ -68,15 +75,18 @@ func fetchMigratorPaths() (string, string, string) {
 		dbSSLMode = "disable"
 	}
 
-	connString := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		dbUser,
-		dbPassword,
-		dbHost,
-		dbPort,
-		dbName,
-		dbSSLMode,
-	)
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(dbUser, dbPassword),
+		Host:   net.JoinHostPort(dbHost, dbPort),
+		Path:   dbName,
+	}
+
+	q := u.Query()
+	q.Set("sslmode", dbSSLMode)
+	u.RawQuery = q.Encode()
+
+	connString := u.String()
 
 	return connString, migrationsPath, migrationsTable
 }

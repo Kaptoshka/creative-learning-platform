@@ -15,18 +15,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type UserRepo struct {
+type Repo struct {
 	pool *pgxpool.Pool
 }
 
-// New creates a new instance of UserRepo.
+// New creates a new instance of Repo.
 // That used to interact with the user table.
-func New(pool *pgxpool.Pool) UserRepo {
-	return UserRepo{pool: pool}
+func New(pool *pgxpool.Pool) Repo {
+	return Repo{pool: pool}
 }
 
 // SaveUser saves a new user to the database.
-func (r *UserRepo) SaveUser(
+func (r *Repo) SaveUser(
 	ctx context.Context,
 	email string,
 	passHash []byte,
@@ -63,16 +63,16 @@ func (r *UserRepo) SaveUser(
 	if err != nil {
 		var pgErr *pgConn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return uuid.Nil, fmt.Errorf("%s: %v", op, domain.ErrUserExists)
+			return uuid.Nil, fmt.Errorf("%s: %w", op, domain.ErrUserExists)
 		}
-		return uuid.Nil, fmt.Errorf("%s: %v", op, err)
+		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return id, nil
 }
 
 // User returns the user with the given email.
-func (r *UserRepo) User(
+func (r *Repo) User(
 	ctx context.Context,
 	email string,
 ) (models.User, error) {
@@ -104,17 +104,17 @@ func (r *UserRepo) User(
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.User{}, fmt.Errorf(
-				"%s: %v", op, domain.ErrUserNotFound,
+				"%s: %w", op, domain.ErrUserNotFound,
 			)
 		}
 
-		return models.User{}, fmt.Errorf("%s: %v", op, err)
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return user, nil
 }
 
-func (r *UserRepo) UserByID(
+func (r *Repo) UserByID(
 	ctx context.Context,
 	userID uuid.UUID,
 ) (models.User, error) {

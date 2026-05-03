@@ -1,14 +1,16 @@
 # ─── Stage 1: proto generation ───────────────────────────────────────────────
 FROM golang:1.26-alpine as proto-gen
 
-RUN apk add --no-cache git ca-certificates curl
+RUN apk add --no-cache \
+    git=2.53.0-r0 \
+    ca-certificates=20260413-r0 \
+    curl=8.18.0-r0
 
 RUN curl -sSL https://github.com/bufbuild/buf/releases/latest/download/buf-Linux-x86_64 \
     -o /usr/local/bin/buf \
-    && chmod +x /usr/local/bin/buf
-
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
-    && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+    && chmod +x /usr/local/bin/buf \
+    && go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11 \
+    && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.1
 
 WORKDIR /workspace
 
@@ -22,18 +24,21 @@ RUN buf generate libs/protos --template libs/protos/buf.gen.yaml
 # ─── Stage 2: builder ────────────────────────────────────────────────────────
 FROM golang:1.26-alpine AS builder
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache \
+    ca-certificates=20260413-r0 \
+    tzdata=2026b-r0
 
 WORKDIR /workspace
 
 COPY go.work* ./
-
 COPY libs/protos/go.mod libs/protos/go.mod
 COPY --from=proto-gen /workspace/libs/protos/gen/ libs/protos/gen/
 
 COPY apps/sso/go.mod apps/sso/go.mod ./apps/sso/
-RUN cd apps/sso && go mod download
+WORKDIR /workspace/apps/sso
+RUN go mod download
 
+WORKDIR /workspace
 COPY apps/sso/ apps/sso/
 
 RUN GRPC_HEALTH_PROBE_VERSION=v0.4.28 && \
@@ -41,10 +46,11 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.28 && \
     https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 && \
     chmod +x /bin/grpc_health_probe
 
-RUN cd apps/sso && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+WORKDIR /workspace/apps/sso
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-s -w" -trimpath \
     -o /bin/sso ./cmd/sso \
-    && go build \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-s -w" -trimpath \
     -o /bin/migrator ./cmd/migrator
 

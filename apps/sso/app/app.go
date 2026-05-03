@@ -78,18 +78,19 @@ func (a *App) runTokenCleanup(
 	log *slog.Logger,
 	repo driven.RefreshRepo,
 ) {
-	ticker := time.NewTicker(24 * time.Hour)
+	dayHours := 24
+	ticker := time.NewTicker(time.Duration(dayHours) * time.Hour)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
 			if err := repo.DeleteExpired(ctx); err != nil {
-				log.Error("failed to cleanup expired tokens",
+				log.ErrorContext(ctx, "failed to cleanup expired tokens",
 					slog.Any("error", err),
 				)
 			} else {
-				log.Info("expired refresh tokens cleaned up")
+				log.InfoContext(ctx, "expired refresh tokens cleaned up")
 			}
 		case <-ctx.Done():
 			return
@@ -101,9 +102,10 @@ func (a *App) Stop() {
 	a.cancelCtx()
 	a.GRPCServer.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	fiveSeconds := 5
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(fiveSeconds)*time.Second)
 	defer cancel()
 
 	_ = a.HTTPServer.Stop(ctx)
-	a.postgresClient.Close()
+	_ = a.postgresClient.Close()
 }

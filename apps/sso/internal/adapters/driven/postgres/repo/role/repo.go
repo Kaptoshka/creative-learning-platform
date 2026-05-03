@@ -11,15 +11,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type RoleRepo struct {
+type Repo struct {
 	pool *pgxpool.Pool
 }
 
-func New(pool *pgxpool.Pool) RoleRepo {
-	return RoleRepo{pool: pool}
+func New(pool *pgxpool.Pool) Repo {
+	return Repo{pool: pool}
 }
 
-func (r *RoleRepo) LinkUserRole(
+func (r *Repo) LinkUserRole(
 	ctx context.Context,
 	userID uuid.UUID,
 	roleID uuid.UUID,
@@ -41,7 +41,7 @@ func (r *RoleRepo) LinkUserRole(
 	return nil
 }
 
-func (r *RoleRepo) RoleID(
+func (r *Repo) RoleID(
 	ctx context.Context,
 	role string,
 ) (uuid.UUID, error) {
@@ -67,7 +67,7 @@ func (r *RoleRepo) RoleID(
 	return roleID, nil
 }
 
-func (r *RoleRepo) UserRole(
+func (r *Repo) UserRole(
 	ctx context.Context,
 	userID uuid.UUID, // ← было int64
 ) (string, error) {
@@ -94,7 +94,7 @@ func (r *RoleRepo) UserRole(
 	return role, nil
 }
 
-func (r *RoleRepo) Scope(
+func (r *Repo) Scope(
 	ctx context.Context,
 	userID uuid.UUID,
 ) ([]string, error) {

@@ -1,23 +1,26 @@
-package tests
+package sso_test
 
 import (
+	"crypto/rsa"
+	"encoding/base64"
+	"encoding/json"
+	"math/big"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/Kaptoshka/creative-learning-platform/sso-service/tests/suite"
 
-	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/sso/v1"
+	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/sso/v1"
 	"github.com/brianvoe/gofakeit"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	emptyAppID = ""
-	appID      = "1"
-	appSecret  = "test-secret"
-
+	emptyAppID     = ""
 	passDefaultLen = 10
 )
 
@@ -38,35 +41,133 @@ func TestRegisterLogin_Login_HappyPath(t *testing.T) {
 		MiddleName: middleName,
 	})
 	require.NoError(t, err)
-	assert.NotEmpty(t, respReg.GetUserId())
+
+	userID := respReg.GetUserId()
+	assert.NotEmpty(t, userID)
+	_, err = uuid.Parse(userID)
+	require.NoError(t, err, "user_id must be a valid UUID")
 
 	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
 		Email:    email,
 		Password: pass,
-		AppId:    appID,
+		AppId:    st.AppID,
 	})
 	require.NoError(t, err)
 
 	loginTime := time.Now()
 
-	token := respLogin.GetToken()
-	require.NotEmpty(t, token)
+	accessToken := respLogin.GetAccessToken()
+	refreshToken := respLogin.GetRefreshToken()
+	require.NotEmpty(t, accessToken)
+	require.NotEmpty(t, refreshToken)
 
-	tokenParsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		return []byte(appSecret), nil
+	publicKey := fetchJWKSPublicKey(t, st.JWKSUrl)
+
+	tokenParsed, err := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
+		_, ok := token.Method.(*jwt.SigningMethodRSA)
+		require.True(t, ok, "unexpected signing method")
+		return publicKey, nil
+	})
+	require.NoError(t, err)
+	require.True(t, tokenParsed.Valid)
+
+	claims, ok := tokenParsed.Claims.(jwt.MapClaims)
+	require.True(t, ok)
+
+	assert.Equal(t, userID, claims["sub"].(string))
+	assert.Equal(t, email, claims["email"].(string))
+
+	assert.Empty(t, claims["app_id"])
+
+	assert.Equal(t, "student", claims["role"].(string))
+
+	assert.NotEmpty(t, claims["scope"])
+
+	_, hasGroups := claims["group_ids"]
+	assert.True(t, hasGroups)
+
+	const deltaSeconds = 10
+	assert.InDelta(t, loginTime.Add(st.Cfg.TokenTTL).Unix(), claims["exp"], deltaSeconds)
+}
+
+func TestRegisterLogin_Refresh_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:      email,
+		Password:   pass,
+		FirstName:  gofakeit.FirstName(),
+		LastName:   gofakeit.LastName(),
+		MiddleName: gofakeit.FirstName(),
 	})
 	require.NoError(t, err)
 
-	claims, ok := tokenParsed.Claims.(jwt.MapClaims)
-	assert.True(t, ok)
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    st.AppID,
+	})
+	require.NoError(t, err)
 
-	assert.Equal(t, respReg.GetUserId(), int64(claims["uid"].(float64)))
-	assert.Equal(t, email, claims["email"].(string))
-	assert.Equal(t, appID, int(claims["app_id"].(float64)))
+	oldRefresh := respLogin.GetRefreshToken()
+	require.NotEmpty(t, oldRefresh)
 
-	const deltaSeconds = 10
+	respRefresh, err := st.AuthClient.Refresh(ctx, &ssov1.RefreshRequest{
+		RefreshToken: oldRefresh,
+	})
+	require.NoError(t, err)
 
-	assert.InDelta(t, loginTime.Add(st.Cfg.TokenTTL).Unix(), claims["exp"], deltaSeconds)
+	newAccessToken := respRefresh.GetAccessToken()
+	newRefreshToken := respRefresh.GetRefreshToken()
+	require.NotEmpty(t, newAccessToken)
+	require.NotEmpty(t, newRefreshToken)
+
+	assert.NotEqual(t, oldRefresh, newRefreshToken)
+
+	_, err = st.AuthClient.Refresh(ctx, &ssov1.RefreshRequest{
+		RefreshToken: oldRefresh,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "refresh token revoked")
+}
+
+func TestRegisterLogin_Logout_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:      email,
+		Password:   pass,
+		FirstName:  gofakeit.FirstName(),
+		LastName:   gofakeit.LastName(),
+		MiddleName: gofakeit.FirstName(),
+	})
+	require.NoError(t, err)
+
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    st.AppID,
+	})
+	require.NoError(t, err)
+
+	refreshToken := respLogin.GetRefreshToken()
+
+	_, err = st.AuthClient.Logout(ctx, &ssov1.LogoutRequest{
+		RefreshToken: refreshToken,
+	})
+	require.NoError(t, err)
+
+	_, err = st.AuthClient.Refresh(ctx, &ssov1.RefreshRequest{
+		RefreshToken: refreshToken,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "refresh token revoked")
 }
 
 func TestRegisterLogin_DuplicateRegistration(t *testing.T) {
@@ -97,7 +198,7 @@ func TestRegisterLogin_DuplicateRegistration(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.Empty(t, respReg.GetUserId())
-	assert.ErrorContains(t, err, "user already exists")
+	require.ErrorContains(t, err, "user already exists")
 }
 
 func TestRegister_FailCases(t *testing.T) {
@@ -198,35 +299,35 @@ func TestLogin_FailCases(t *testing.T) {
 		name        string
 		email       string
 		password    string
-		appID       int32
+		appID       string
 		expectedErr string
 	}{
 		{
 			name:        "Login with Empty Password",
 			email:       gofakeit.Email(),
 			password:    "",
-			appID:       appID,
+			appID:       st.AppID,
 			expectedErr: "password is required",
 		},
 		{
 			name:        "Login with Empty Email",
 			email:       "",
 			password:    randomFakePassword(),
-			appID:       appID,
+			appID:       st.AppID,
 			expectedErr: "email is required",
 		},
 		{
 			name:        "Login with Both Empty Email and Password",
 			email:       "",
 			password:    "",
-			appID:       appID,
+			appID:       st.AppID,
 			expectedErr: "email is required",
 		},
 		{
 			name:        "Login with Non-Matching Password",
 			email:       gofakeit.Email(),
 			password:    randomFakePassword(),
-			appID:       appID,
+			appID:       st.AppID,
 			expectedErr: "invalid email or password",
 		},
 		{
@@ -235,6 +336,13 @@ func TestLogin_FailCases(t *testing.T) {
 			password:    randomFakePassword(),
 			appID:       emptyAppID,
 			expectedErr: "app_id is required",
+		},
+		{
+			name:        "Login with Invalid AppID format",
+			email:       gofakeit.Email(),
+			password:    randomFakePassword(),
+			appID:       "not-a-uuid",
+			expectedErr: "app_id must be a valid UUID",
 		},
 	}
 	for _, tt := range tests {
@@ -256,6 +364,43 @@ func TestLogin_FailCases(t *testing.T) {
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.expectedErr)
 		})
+	}
+}
+
+func fetchJWKSPublicKey(t *testing.T, jwksURL string) *rsa.PublicKey {
+	t.Helper()
+
+	resp, err := http.Get(jwksURL)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var jwks struct {
+		Keys []struct {
+			N   string `json:"n"`
+			E   string `json:"e"`
+			Kid string `json:"kid"`
+			Alg string `json:"alg"`
+		} `json:"keys"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&jwks)
+	require.NoError(t, err)
+	require.NotEmpty(t, jwks.Keys, "JWKS must contain at least one key")
+
+	key := jwks.Keys[0]
+
+	nBytes, err := base64.RawURLEncoding.DecodeString(key.N)
+	require.NoError(t, err)
+
+	eBytes, err := base64.RawURLEncoding.DecodeString(key.E)
+	require.NoError(t, err)
+
+	n := new(big.Int).SetBytes(nBytes)
+	e := new(big.Int).SetBytes(eBytes)
+
+	return &rsa.PublicKey{
+		N: n,
+		E: int(e.Int64()),
 	}
 }
 
