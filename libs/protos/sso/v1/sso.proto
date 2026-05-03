@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package sso.v1;
+
+option go_package = "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/sso/v1;ssov1";
+
+service AuthService {
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc Logout(LogoutRequest) returns (LogoutResponse);
+    rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse);
+    rpc Refresh(RefreshRequest) returns (RefreshResponse);
+    rpc RegisterApp(RegisterAppRequest) returns (RegisterAppResponse);
+    rpc DeactivateApp(DeactivateAppRequest) returns (DeactivateAppResponse);
+}
+
+message RegisterRequest {
+    string email = 1;
+    string password = 2;
+    string first_name = 3;
+    string last_name = 4;
+    string middle_name = 5;
+}
+
+message RegisterResponse {
+    string user_id = 1;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+    string app_id = 3;
+}
+
+message LoginResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+}
+
+message LogoutRequest {
+    string refresh_token = 1;
+}
+
+message LogoutResponse {
+}
+
+message LogoutAllRequest {
+    string user_id = 1;
+}
+
+message LogoutAllResponse {
+}
+
+message RefreshRequest {
+    string refresh_token = 1;
+}
+
+message RefreshResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+}
+
+message DeactivateAppRequest {
+    string app_id = 1;
+}
+
+message DeactivateAppResponse {
+}
+
+message RegisterAppRequest {
+    string name = 1;
+    string secret = 2;
+    string description = 3;
+}
+
+message RegisterAppResponse {
+    string app_id = 1;
+}

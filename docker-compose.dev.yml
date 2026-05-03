@@ -1,4 +1,9 @@
 ---
+x-assignments-build-dev: &assignments-build-dev
+    build:
+        context: .
+        dockerfile: apps/assignments/Dockerfile.dev
+
 services:
     postgres:
         image: postgres:18-alpine
@@ -25,10 +30,33 @@ services:
         networks:
             - backend
 
+    migrate-assignments:
+        <<: *assignments-build-dev
+        container_name: migrate-assignments-dev
+        env_file:
+            - apps/assignments/.env
+        environment:
+            DB_HOST: postgres
+            DB_PORT: 5432
+            MIGRATIONS_PATH: /workspace/apps/assignments/migrations
+        entrypoint:
+            [
+                "sh",
+                "-c",
+                "cd /workspace/apps/assignments && go run ./cmd/migrator",
+            ]
+        volumes:
+            - .:/workspace
+            - go_mod_cache:/root/go/pkg/mod
+            - go_build_cache:/root/.cache/go/build
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - backend
+
     assignment-service:
-        build:
-            context: ./apps/assignments
-            dockerfile: Dockerfile.dev
+        <<: *assignments-build-dev
         container_name: assignment-service-dev
         env_file:
             - apps/assignments/.env
@@ -49,6 +77,8 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+            migrate-assignments:
+                condition: service_completed_successfully
         networks:
             - backend
 
@@ -56,6 +86,7 @@ volumes:
     postgres_dev_data:
     go_mod_cache:
     go_build_cache:
+
 networks:
     backend:
         driver: bridge
