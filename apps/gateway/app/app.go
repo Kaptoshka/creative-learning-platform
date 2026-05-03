@@ -52,18 +52,19 @@ func New(
 	ssoUseCase := usecase.NewSSOUseCase(ssoAdapter)
 	assignmentsUseCase := usecase.NewAssignmentsUseCase(assignmentsAdapter)
 
-	ssoHandler := handlers.NewSSOHandler(ssoUseCase)
-	assignmentsHandler := handlers.NewAssignmentsHandler(assignmentsUseCase)
+	ssoHandler := handlers.NewSSOHandler(ssoUseCase, log)
+	assignmentsHandler := handlers.NewAssignmentsHandler(assignmentsUseCase, log)
 
 	mw := middleware.New(cfg)
 
-	r := router.New(ssoHandler, assignmentsHandler, mw)
+	r := router.New(log, ssoHandler, assignmentsHandler, mw)
 
+	x3 := 3
 	srv := &http.Server{
 		Addr:         cfg.HTTPServer.Address,
 		Handler:      r,
 		ReadTimeout:  cfg.HTTPServer.Timeout,
-		WriteTimeout: cfg.HTTPServer.Timeout * 3,
+		WriteTimeout: cfg.HTTPServer.Timeout * time.Duration(x3),
 		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
 	}
 
@@ -89,7 +90,7 @@ func mustDial(
 
 	conn, err := grpc.NewClient(client.Address, opts...)
 	if err != nil {
-		slog.Error("failed to connect to gRPC service", "addr", client.Address, "err", err)
+		log.Error("failed to connect to gRPC service", "addr", client.Address, "err", err)
 		return nil, fmt.Errorf("failed to connect to gRPC service: %w", err)
 	}
 

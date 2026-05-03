@@ -40,6 +40,17 @@ func mapGRPCError(err error) error {
 		return domain.ErrInvalidArgument
 	case codes.OutOfRange:
 		return domain.ErrInvalidPageToken
+	case codes.OK,
+		codes.Canceled,
+		codes.Unknown,
+		codes.DeadlineExceeded,
+		codes.ResourceExhausted,
+		codes.Aborted,
+		codes.Unimplemented,
+		codes.Internal,
+		codes.Unavailable,
+		codes.DataLoss:
+		return domain.ErrInternal
 	default:
 		return domain.ErrInternal
 	}

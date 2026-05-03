@@ -34,7 +34,7 @@ func main() {
 	errCh := make(chan error, 1)
 	go func() {
 		log.Info("gateway starting", "addr", cfg.HTTPServer.Address, "env", cfg.Env, "version", cfg.Version)
-		if err := application.HTTPServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err = application.HTTPServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("server error", "err", err)
 			os.Exit(1)
 		}
@@ -46,7 +46,7 @@ func main() {
 	select {
 	case sysSign := <-stop:
 		log.Info("stopping api gateway...", slog.String("signal", sysSign.String()))
-	case err := <-errCh:
+	case err = <-errCh:
 		log.Error("api gateway server failed", slog.Any("error", err))
 	}
 

@@ -9,18 +9,18 @@ import (
 )
 
 type Config struct {
-	Env        string     `yaml:"env" env-default:"local"`
-	Version    string     `yaml:"version" env-default:"v0.0.1"`
+	Env        string     `yaml:"env"         env-default:"local"`
+	Version    string     `yaml:"version"     env-default:"v0.0.1"`
 	HTTPServer HTTPServer `yaml:"http_server"`
 	Clients    Clients    `yaml:"clients"`
-	JWKSURL    string     `yaml:"jwks_url" env-required:"true"`
+	JWKSURL    string     `yaml:"jwks_url"                         env-required:"true"`
 }
 
 type HTTPServer struct {
-	Address     string        `yaml:"address" env-default:"127.0.0.1:8080"`
-	Timeout     time.Duration `yaml:"timeout" env-default:"5s"`
+	Address     string        `yaml:"address"      env-default:"127.0.0.1:8080"`
+	Timeout     time.Duration `yaml:"timeout"      env-default:"5s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
-	CORSOrigin  string        `yaml:"cors_origin" env-default:"http://localhost:3000"`
+	CORSOrigin  string        `yaml:"cors_origin"  env-default:"http://localhost:3000"`
 }
 
 type Clients struct {
@@ -29,10 +29,10 @@ type Clients struct {
 }
 
 type GRPCClient struct {
-	Address      string        `yaml:"address" env-required:"true"`
-	Timeout      time.Duration `yaml:"timeout" env-default:"5s"`
-	RetriesCount int           `yaml:"retries_count" env-default:"3"`
-	Insecure     bool          `yaml:"insecure" env-default:"false"`
+	Address      string        `yaml:"address"       env-required:"true"`
+	Timeout      time.Duration `yaml:"timeout"                           env-default:"5s"`
+	RetriesCount int           `yaml:"retries_count"                     env-default:"3"`
+	Insecure     bool          `yaml:"insecure"                          env-default:"false"`
 }
 
 // MustLoad retrive path to config
@@ -64,7 +64,7 @@ func MustLoadByPath(path string) *Config {
 
 // fetchConfigPath fetches config path from command line flag or environment variable
 // Priority: flag > env > default
-// Default value: is empty string
+// Default value: is empty string.
 func fetchConfigPath() string {
 	var res string
 

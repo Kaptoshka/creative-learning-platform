@@ -90,7 +90,7 @@ func protoToTarget(t *assignmentsv1.AssignmentTarget) domain.AssignmentTarget {
 	if t == nil {
 		return domain.AssignmentTarget{}
 	}
-	switch v := t.Target.(type) {
+	switch v := t.GetTarget().(type) {
 	case *assignmentsv1.AssignmentTarget_GroupId:
 		return domain.AssignmentTarget{GroupID: v.GroupId}
 	case *assignmentsv1.AssignmentTarget_StudentId:
@@ -114,15 +114,15 @@ func protoToTemplate(t *assignmentsv1.AssignmentTemplate) domain.AssignmentTempl
 		return domain.AssignmentTemplate{}
 	}
 	return domain.AssignmentTemplate{
-		ID:           t.Id,
-		CreatorID:    t.CreatorId,
-		Title:        t.Title,
-		Description:  t.Description,
-		WidgetID:     t.WidgetId,
-		WidgetConfig: protoToMap(t.WidgetConfig),
-		DueDate:      protoToTime(t.DueDate),
-		CreatedAt:    protoToTimeVal(t.CreatedAt),
-		UpdatedAt:    protoToTimeVal(t.UpdatedAt),
+		ID:           t.GetId(),
+		CreatorID:    t.GetCreatorId(),
+		Title:        t.GetTitle(),
+		Description:  t.GetDescription(),
+		WidgetID:     t.GetWidgetId(),
+		WidgetConfig: protoToMap(t.GetWidgetConfig()),
+		DueDate:      protoToTime(t.GetDueDate()),
+		CreatedAt:    protoToTimeVal(t.GetCreatedAt()),
+		UpdatedAt:    protoToTimeVal(t.GetUpdatedAt()),
 	}
 }
 
@@ -131,10 +131,10 @@ func protoToTemplateLight(t *assignmentsv1.AssignmentTemplateLight) domain.Assig
 		return domain.AssignmentTemplateLight{}
 	}
 	return domain.AssignmentTemplateLight{
-		ID:         t.Id,
-		Title:      t.Title,
-		WidgetType: t.WidgetType,
-		DueDate:    protoToTime(t.DueDate),
+		ID:         t.GetId(),
+		Title:      t.GetTitle(),
+		WidgetType: t.GetWidgetType(),
+		DueDate:    protoToTime(t.GetDueDate()),
 	}
 }
 
@@ -145,15 +145,15 @@ func protoToSubmission(s *assignmentsv1.Submission) domain.Submission {
 		return domain.Submission{}
 	}
 	sub := domain.Submission{
-		ID:          s.Id,
-		TemplateID:  s.TemplateId,
-		StudentID:   s.StudentId,
-		Status:      domain.SubmissionStatus(s.Status),
-		StartedAt:   protoToTime(s.StartedAt),
-		SubmittedAt: protoToTime(s.SubmittedAt),
+		ID:          s.GetId(),
+		TemplateID:  s.GetTemplateId(),
+		StudentID:   s.GetStudentId(),
+		Status:      domain.SubmissionStatus(s.GetStatus()),
+		StartedAt:   protoToTime(s.GetStartedAt()),
+		SubmittedAt: protoToTime(s.GetSubmittedAt()),
 	}
-	if s.LatestVersion != nil {
-		v := protoToVersionLight(s.LatestVersion)
+	if s.GetLatestVersion() != nil {
+		v := protoToVersionLight(s.GetLatestVersion())
 		sub.LatestVersion = &v
 	}
 	return sub
@@ -174,13 +174,13 @@ func protoToVersion(v *assignmentsv1.SubmissionVersion) domain.SubmissionVersion
 		return domain.SubmissionVersion{}
 	}
 	return domain.SubmissionVersion{
-		ID:            v.Id,
-		VersionNumber: v.VersionNumber,
-		Payload:       protoToMap(v.Payload),
-		TimeSpent:     protoToDuration(v.TimeSpentSeconds),
-		IsAutosave:    v.IsAutosave,
-		CreatedAt:     protoToTimeVal(v.CreatedAt),
-		UpdatedAt:     protoToTimeVal(v.UpdatedAt),
+		ID:            v.GetId(),
+		VersionNumber: v.GetVersionNumber(),
+		Payload:       protoToMap(v.GetPayload()),
+		TimeSpent:     protoToDuration(v.GetTimeSpentSeconds()),
+		IsAutosave:    v.GetIsAutosave(),
+		CreatedAt:     protoToTimeVal(v.GetCreatedAt()),
+		UpdatedAt:     protoToTimeVal(v.GetUpdatedAt()),
 	}
 }
 
@@ -189,9 +189,9 @@ func protoToVersionLight(v *assignmentsv1.SubmissionVersionLight) domain.Submiss
 		return domain.SubmissionVersionLight{}
 	}
 	return domain.SubmissionVersionLight{
-		ID:            v.Id,
-		VersionNumber: v.VersionNumber,
-		CreatedAt:     protoToTimeVal(v.CreatedAt),
+		ID:            v.GetId(),
+		VersionNumber: v.GetVersionNumber(),
+		CreatedAt:     protoToTimeVal(v.GetCreatedAt()),
 	}
 }
 
@@ -210,14 +210,14 @@ func protoToFeedback(f *assignmentsv1.Feedback) domain.Feedback {
 		return domain.Feedback{}
 	}
 	return domain.Feedback{
-		ID:          f.Id,
-		VersionID:   f.VersionId,
-		GraderID:    f.GraderId,
-		TextContent: f.TextContent,
-		Payload:     protoToMap(f.Payload),
-		IsPublished: f.IsPublished,
-		CreatedAt:   protoToTimeVal(f.CreatedAt),
-		UpdatedAt:   protoToTimeVal(f.UpdatedAt),
+		ID:          f.GetId(),
+		VersionID:   f.GetVersionId(),
+		GraderID:    f.GetGraderId(),
+		TextContent: f.GetTextContent(),
+		Payload:     protoToMap(f.GetPayload()),
+		IsPublished: f.GetIsPublished(),
+		CreatedAt:   protoToTimeVal(f.GetCreatedAt()),
+		UpdatedAt:   protoToTimeVal(f.GetUpdatedAt()),
 	}
 }
 

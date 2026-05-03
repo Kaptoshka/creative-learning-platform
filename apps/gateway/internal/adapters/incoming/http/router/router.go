@@ -1,6 +1,7 @@
 package router
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/middleware"
@@ -10,6 +11,7 @@ import (
 )
 
 func New(
+	log *slog.Logger,
 	sso incoming.SSOHandler,
 	assignments incoming.AssignmentHandler,
 	mw *middleware.Middleware,
@@ -19,95 +21,95 @@ func New(
 	// --- SSO: public routes ---
 	mux.Handle(
 		"POST /api/v1/auth/register",
-		mw.Public(http.HandlerFunc(sso.Register)),
+		mw.Public(log, http.HandlerFunc(sso.Register)),
 	)
 	mux.Handle(
 		"POST /api/v1/auth/login",
-		mw.Public(http.HandlerFunc(sso.Login)),
+		mw.Public(log, http.HandlerFunc(sso.Login)),
 	)
 	mux.Handle(
 		"POST /api/v1/auth/refresh",
-		mw.Public(http.HandlerFunc(sso.Refresh)),
+		mw.Public(log, http.HandlerFunc(sso.Refresh)),
 	)
 
 	// --- SSO: need token ---
 	mux.Handle(
 		"POST /api/v1/auth/logout",
-		mw.Protected(http.HandlerFunc(sso.Logout)),
+		mw.Protected(log, http.HandlerFunc(sso.Logout)),
 	)
 	mux.Handle(
 		"POST /api/v1/auth/logout-all",
-		mw.Protected(http.HandlerFunc(sso.LogoutAll)),
+		mw.Protected(log, http.HandlerFunc(sso.LogoutAll)),
 	)
 
 	// --- SSO: admin only ---
 	mux.Handle(
 		"POST /api/v1/admin/apps",
-		mw.Protected(http.HandlerFunc(sso.RegisterApp)),
+		mw.Protected(log, http.HandlerFunc(sso.RegisterApp)),
 	)
 	mux.Handle(
 		"POST /api/v1/admin/apps/{app_id}/deactivate",
-		mw.Protected(http.HandlerFunc(sso.DeactivateApp)),
+		mw.Protected(log, http.HandlerFunc(sso.DeactivateApp)),
 	)
 
 	// --- Assignments: Teacher — template management ---
 	mux.Handle(
 		"GET /api/v1/assignments",
-		mw.Protected(http.HandlerFunc(assignments.ListAssignments)),
+		mw.Protected(log, http.HandlerFunc(assignments.ListAssignments)),
 	)
 	mux.Handle(
 		"POST /api/v1/assignments",
-		mw.Protected(http.HandlerFunc(assignments.CreateAssignment)),
+		mw.Protected(log, http.HandlerFunc(assignments.CreateAssignment)),
 	)
 	mux.Handle(
 		"GET /api/v1/assignments/{id}",
-		mw.Protected(http.HandlerFunc(assignments.GetAssignment)),
+		mw.Protected(log, http.HandlerFunc(assignments.GetAssignment)),
 	)
 	mux.Handle(
 		"PATCH /api/v1/assignments/{id}",
-		mw.Protected(http.HandlerFunc(assignments.UpdateAssignment)),
+		mw.Protected(log, http.HandlerFunc(assignments.UpdateAssignment)),
 	)
 	mux.Handle(
 		"DELETE /api/v1/assignments/{id}",
-		mw.Protected(http.HandlerFunc(assignments.DeleteAssignment)),
+		mw.Protected(log, http.HandlerFunc(assignments.DeleteAssignment)),
 	)
 
 	// --- Assignments: Teacher — submissions & feedback ---
 	mux.Handle(
 		"GET /api/v1/assignments/{template_id}/submissions",
-		mw.Protected(http.HandlerFunc(assignments.ListAssignmentSubmissions)),
+		mw.Protected(log, http.HandlerFunc(assignments.ListAssignmentSubmissions)),
 	)
 	mux.Handle(
 		"GET /api/v1/submissions/{submission_id}",
-		mw.Protected(http.HandlerFunc(assignments.GetStudentSubmission)),
+		mw.Protected(log, http.HandlerFunc(assignments.GetStudentSubmission)),
 	)
 	mux.Handle(
 		"POST /api/v1/submissions/{submission_id}/feedback",
-		mw.Protected(http.HandlerFunc(assignments.ProvideFeedback)),
+		mw.Protected(log, http.HandlerFunc(assignments.ProvideFeedback)),
 	)
 
 	// --- Assignments: Student — assignment workflow ---
 	mux.Handle(
 		"GET /api/v1/my/assignments",
-		mw.Protected(http.HandlerFunc(assignments.ListMyAssignments)),
+		mw.Protected(log, http.HandlerFunc(assignments.ListMyAssignments)),
 	)
 	mux.Handle(
 		"POST /api/v1/my/assignments/{template_id}/start",
-		mw.Protected(http.HandlerFunc(assignments.StartAssignment)),
+		mw.Protected(log, http.HandlerFunc(assignments.StartAssignment)),
 	)
 	mux.Handle(
 		"PUT /api/v1/my/submissions/{submission_id}/draft",
-		mw.Protected(http.HandlerFunc(assignments.SaveAssignmentDraft)),
+		mw.Protected(log, http.HandlerFunc(assignments.SaveAssignmentDraft)),
 	)
 	mux.Handle(
 		"POST /api/v1/my/submissions/{submission_id}/submit",
-		mw.Protected(http.HandlerFunc(assignments.SubmitAssignment)),
+		mw.Protected(log, http.HandlerFunc(assignments.SubmitAssignment)),
 	)
 
 	// --- Swagger UI ---
 	mux.Handle(
 		"/api/v1/swagger/",
-		mw.Protected(httpSwagger.WrapHandler),
+		mw.Protected(log, httpSwagger.WrapHandler),
 	)
 
 	return mux

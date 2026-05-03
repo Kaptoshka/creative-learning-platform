@@ -35,7 +35,7 @@ func (a *AssignmentsAdapter) CreateAssignment(
 		return domain.CreateAssignmentResponse{}, mapGRPCError(err)
 	}
 
-	return domain.CreateAssignmentResponse{ID: res.Id}, nil
+	return domain.CreateAssignmentResponse{ID: res.GetId()}, nil
 }
 
 func (a *AssignmentsAdapter) UpdateAssignment(
@@ -60,7 +60,7 @@ func (a *AssignmentsAdapter) UpdateAssignment(
 	}
 
 	return domain.UpdateAssignmentResponse{
-		Template: protoToTemplate(res.Template),
+		Template: protoToTemplate(res.GetTemplate()),
 	}, nil
 }
 
@@ -86,8 +86,8 @@ func (a *AssignmentsAdapter) GetAssignment(
 	}
 
 	return domain.GetAssignmentResponse{
-		Template: protoToTemplate(res.Template),
-		Targets:  protoToTargets(res.Targets),
+		Template: protoToTemplate(res.GetTemplate()),
+		Targets:  protoToTargets(res.GetTargets()),
 	}, nil
 }
 
@@ -106,14 +106,14 @@ func (a *AssignmentsAdapter) ListAssignments(
 		return domain.ListAssignmentsResponse{}, mapGRPCError(err)
 	}
 
-	items := make([]domain.AssignmentTemplateLight, len(res.Items))
-	for i, item := range res.Items {
+	items := make([]domain.AssignmentTemplateLight, len(res.GetItems()))
+	for i, item := range res.GetItems() {
 		items[i] = protoToTemplateLight(item)
 	}
 
 	return domain.ListAssignmentsResponse{
 		Items:         items,
-		NextPageToken: res.NextPageToken,
+		NextPageToken: res.GetNextPageToken(),
 	}, nil
 }
 
@@ -132,8 +132,8 @@ func (a *AssignmentsAdapter) ListAssignmentSubmissions(
 	}
 
 	return domain.ListAssignmentSubmissionsResponse{
-		Items:         protoToSubmissions(res.Items),
-		NextPageToken: res.NextPageToken,
+		Items:         protoToSubmissions(res.GetItems()),
+		NextPageToken: res.GetNextPageToken(),
 	}, nil
 }
 
@@ -148,10 +148,10 @@ func (a *AssignmentsAdapter) GetStudentSubmission(
 	}
 
 	return domain.GetStudentSubmissionResponse{
-		Template:   protoToTemplate(res.Template),
-		Submission: protoToSubmission(res.Submission),
-		History:    protoToVersions(res.History),
-		Feedback:   protoToFeedbacks(res.Feedback),
+		Template:   protoToTemplate(res.GetTemplate()),
+		Submission: protoToSubmission(res.GetSubmission()),
+		History:    protoToVersions(res.GetHistory()),
+		Feedback:   protoToFeedbacks(res.GetFeedback()),
 	}, nil
 }
 
@@ -184,18 +184,18 @@ func (a *AssignmentsAdapter) ListMyAssignments(
 		return domain.ListMyAssignmentsResponse{}, mapGRPCError(err)
 	}
 
-	items := make([]domain.ListMyAssignmentsItem, len(res.Items))
-	for i, item := range res.Items {
+	items := make([]domain.ListMyAssignmentsItem, len(res.GetItems()))
+	for i, item := range res.GetItems() {
 		items[i] = domain.ListMyAssignmentsItem{
-			Template:    protoToTemplateLight(item.Template),
-			Status:      domain.SubmissionStatus(item.Status),
-			HasFeedback: item.HasFeedback,
+			Template:    protoToTemplateLight(item.GetTemplate()),
+			Status:      domain.SubmissionStatus(item.GetStatus()),
+			HasFeedback: item.GetHasFeedback(),
 		}
 	}
 
 	return domain.ListMyAssignmentsResponse{
 		Items:         items,
-		NextPageToken: res.NextPageToken,
+		NextPageToken: res.GetNextPageToken(),
 	}, nil
 }
 
@@ -211,8 +211,8 @@ func (a *AssignmentsAdapter) StartAssignment(
 	}
 
 	return domain.StartAssignmentResponse{
-		SubmissionID: res.SubmissionId,
-		StartedAt:    protoToTimeVal(res.StartedAt),
+		SubmissionID: res.GetSubmissionId(),
+		StartedAt:    protoToTimeVal(res.GetStartedAt()),
 	}, nil
 }
 
@@ -230,8 +230,8 @@ func (a *AssignmentsAdapter) SaveAssignmentDraft(
 	}
 
 	return domain.SaveAssignmentDraftResponse{
-		VersionID: res.VersionId,
-		SavedAt:   protoToTimeVal(res.SavedAt),
+		VersionID: res.GetVersionId(),
+		SavedAt:   protoToTimeVal(res.GetSavedAt()),
 	}, nil
 }
 
@@ -249,7 +249,7 @@ func (a *AssignmentsAdapter) SubmitAssignment(
 	}
 
 	return domain.SubmitAssignmentResponse{
-		VersionID: res.VersionId,
-		Status:    domain.SubmissionStatus(res.Status),
+		VersionID: res.GetVersionId(),
+		Status:    domain.SubmissionStatus(res.GetStatus()),
 	}, nil
 }

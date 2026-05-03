@@ -74,7 +74,10 @@ func (uc *SSOUseCase) Login(
 	return uc.sso.Login(ctx, req)
 }
 
-func (uc *SSOUseCase) Refresh(ctx context.Context, req domain.RefreshRequest) (domain.RefreshResponse, error) {
+func (uc *SSOUseCase) Refresh(
+	ctx context.Context,
+	req domain.RefreshRequest,
+) (domain.RefreshResponse, error) {
 	if req.RefreshToken == "" {
 		return domain.RefreshResponse{}, fmt.Errorf(
 			"%w: refresh_token is required",
@@ -85,7 +88,10 @@ func (uc *SSOUseCase) Refresh(ctx context.Context, req domain.RefreshRequest) (d
 	return uc.sso.Refresh(ctx, req)
 }
 
-func (uc *SSOUseCase) LogoutAll(ctx context.Context, req domain.LogoutAllRequest) (domain.LogoutAllResponse, error) {
+func (uc *SSOUseCase) LogoutAll(
+	ctx context.Context,
+	req domain.LogoutAllRequest,
+) (domain.LogoutAllResponse, error) {
 	if req.UserID == "" {
 		return domain.LogoutAllResponse{}, fmt.Errorf(
 			"%w: user_id is required",
@@ -96,7 +102,10 @@ func (uc *SSOUseCase) LogoutAll(ctx context.Context, req domain.LogoutAllRequest
 	return uc.sso.LogoutAll(ctx, req)
 }
 
-func (uc *SSOUseCase) RegisterApp(ctx context.Context, req domain.RegisterAppRequest) (domain.RegisterAppResponse, error) {
+func (uc *SSOUseCase) RegisterApp(
+	ctx context.Context,
+	req domain.RegisterAppRequest,
+) (domain.RegisterAppResponse, error) {
 	if req.Name == "" {
 		return domain.RegisterAppResponse{}, fmt.Errorf(
 			"%w: name is required",
@@ -113,7 +122,10 @@ func (uc *SSOUseCase) RegisterApp(ctx context.Context, req domain.RegisterAppReq
 	return uc.sso.RegisterApp(ctx, req)
 }
 
-func (uc *SSOUseCase) DeactivateApp(ctx context.Context, req domain.DeactivateAppRequest) (domain.DeactivateAppResponse, error) {
+func (uc *SSOUseCase) DeactivateApp(
+	ctx context.Context,
+	req domain.DeactivateAppRequest,
+) (domain.DeactivateAppResponse, error) {
 	if req.AppID == "" {
 		return domain.DeactivateAppResponse{}, fmt.Errorf(
 			"%w: app_id is required",

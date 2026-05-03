@@ -13,29 +13,29 @@ type errorResponse struct {
 	Error string `json:"error"`
 }
 
-func JSON(w http.ResponseWriter, status int, data any) {
+func JSON(log *slog.Logger, w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		slog.Error("failed to encode response", "err", err)
+		log.Error("failed to encode response", "error", err)
 	}
 }
 
-func OK(w http.ResponseWriter, data any) {
-	JSON(w, http.StatusOK, data)
+func OK(log *slog.Logger, w http.ResponseWriter, data any) {
+	JSON(log, w, http.StatusOK, data)
 }
 
-func Created(w http.ResponseWriter, data any) {
-	JSON(w, http.StatusCreated, data)
+func Created(log *slog.Logger, w http.ResponseWriter, data any) {
+	JSON(log, w, http.StatusCreated, data)
 }
 
 func NoContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func Error(w http.ResponseWriter, err error) {
+func Error(log *slog.Logger, w http.ResponseWriter, err error) {
 	status := domainErrToStatus(err)
-	JSON(w, status, errorResponse{Error: err.Error()})
+	JSON(log, w, status, errorResponse{Error: err.Error()})
 }
 
 func DecodeJSON(r *http.Request, dst any) error {

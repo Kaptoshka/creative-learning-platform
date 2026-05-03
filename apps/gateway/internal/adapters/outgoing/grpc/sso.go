@@ -30,7 +30,7 @@ func (a *SSOAdapter) Register(
 		return domain.RegisterResponse{}, mapGRPCError(err)
 	}
 
-	return domain.RegisterResponse{UserID: res.UserId}, nil
+	return domain.RegisterResponse{UserID: res.GetUserId()}, nil
 }
 
 func (a *SSOAdapter) Login(
@@ -47,8 +47,8 @@ func (a *SSOAdapter) Login(
 	}
 
 	return domain.LoginResponse{
-		AccessToken:  res.AccessToken,
-		RefreshToken: res.RefreshToken,
+		AccessToken:  res.GetAccessToken(),
+		RefreshToken: res.GetRefreshToken(),
 	}, nil
 }
 
@@ -64,8 +64,8 @@ func (a *SSOAdapter) Refresh(
 	}
 
 	return domain.RefreshResponse{
-		AccessToken:  res.AccessToken,
-		RefreshToken: res.RefreshToken,
+		AccessToken:  res.GetAccessToken(),
+		RefreshToken: res.GetRefreshToken(),
 	}, nil
 }
 
@@ -110,7 +110,7 @@ func (a *SSOAdapter) RegisterApp(
 		return domain.RegisterAppResponse{}, mapGRPCError(err)
 	}
 
-	return domain.RegisterAppResponse{AppID: res.AppId}, nil
+	return domain.RegisterAppResponse{AppID: res.GetAppId()}, nil
 }
 
 func (a *SSOAdapter) DeactivateApp(

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -15,11 +16,11 @@ const TokenKey contextKey = "token"
 
 // Auth extracts Bearer token from Authorization header and puts it into context.
 // Handlers retrieve it via TokenFromCtx.
-func Auth(next http.Handler) http.Handler {
+func Auth(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := extractToken(r)
 		if token == "" {
-			httputil.Error(w, domain.ErrUnauthenticated)
+			httputil.Error(log, w, domain.ErrUnauthenticated)
 			return
 		}
 
@@ -40,7 +41,8 @@ func extractToken(r *http.Request) string {
 		return ""
 	}
 
-	parts := strings.SplitN(header, " ", 2)
+	half := 2
+	parts := strings.SplitN(header, " ", half)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
 		return ""
 	}
