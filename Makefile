@@ -16,7 +16,7 @@ lint:
 .PHONY: lint-go
 lint-go:
 	@echo "==> Linting Go..."
-	@$(GO_LINT) run --config=.golangci.yml
+	@$(GO_LINT) run --config=.golangci.yml ./apps/sso/...
 
 .PHONY: lint-nix
 lint-nix:
@@ -41,7 +41,7 @@ lint-docker:
 	@set -e; \
 	for file in $(DOCKERFILES); do \
 		echo "Linting $$file"; \
-		$(HADOLINT) --config .hadolint.yaml $$file; \
+		$(HADOLINT) --config .hadolint.yml $$file; \
 	done
 
 .PHONY: lint-compose
