@@ -59,7 +59,7 @@ jobs:
               uses: golangci/golangci-lint-action@v9
               with:
                   version: v2.10
-                  args: --config=.golangci.yml
+                  args: --config=.golangci.yml ./apps/sso/...
 
     lint-nix:
         name: Nix
