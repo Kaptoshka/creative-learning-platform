@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/config"
-	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/assignments/v1"
-	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/sso/v1"
+	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1"
+	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/sso/v1"
 
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/handlers"
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/adapters/incoming/http/middleware"
