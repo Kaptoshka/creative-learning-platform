@@ -21,30 +21,36 @@ COPY libs/protos/go.mod          libs/protos/go.mod
 
 RUN buf generate libs/protos --template libs/protos/buf.gen.yaml
 
-# ─── Stage 2: dev ────────────────────────────────────────────────────────────
-FROM golang:1.26-alpine AS dev
+# ─── Stage 2: builder ────────────────────────────────────────────────────────
+FROM golang:1.26-alpine AS builder
 
 RUN apk add --no-cache \
-    git=2.53.0-r0 \
     ca-certificates=20260413-r0 \
     tzdata=2026b-r0
 
-RUN go install github.com/air-verse/air@v1.65.1 \
-    && go install github.com/go-delve/delve/cmd/dlv@v1.26.1
-
 WORKDIR /workspace
 
-COPY go.work go.work.sum ./
-
+COPY go.work* ./
 COPY libs/protos/go.mod libs/protos/go.mod
+COPY apps/gateway/go.mod apps/gateway/go.sum ./apps/gateway/
+
 COPY --from=proto-gen /workspace/libs/protos/gen/ libs/protos/gen/
 
-COPY apps/assignments/go.mod apps/assignments/go.sum ./apps/assignments/
+RUN go work sync && go mod download
 
-WORKDIR /workspace/apps/assignments
-RUN go mod download
+COPY apps/api-gateway/ ./apps/api-gateway/
 
-EXPOSE 50052
-EXPOSE 2345
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w" -trimpath \
+    -o /bin/gateway ./apps/gateway/cmd/gateway
 
-CMD ["sh", "-c", "go mod download && air -c .air.toml"]
+# ─── Stage 3: final ──────────────────────────────────────────────────────────
+FROM scratch
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /bin/gateway /bin/gateway
+
+EXPOSE 8000
+
+ENTRYPOINT ["/bin/gateway"]

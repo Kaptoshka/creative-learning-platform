@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/core/domain"
-	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/assignments/v1"
+	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"

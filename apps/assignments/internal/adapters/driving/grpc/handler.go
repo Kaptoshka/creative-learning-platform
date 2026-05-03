@@ -10,7 +10,7 @@ import (
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/internal/ports/driving"
 	"github.com/Kaptoshka/creative-learning-platform/assignment-service/pkg/auth"
 
-	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/assignments/v1"
+	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
