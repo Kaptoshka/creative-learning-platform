@@ -68,6 +68,22 @@ func (h *SSOHandler) Login(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, res)
 }
 
+func (h *SSOHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var req domain.RefreshRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.Error(w, domain.ErrInvalidArgument)
+		return
+	}
+
+	res, err := h.uc.Refresh(r.Context(), req)
+	if err != nil {
+		httputil.Error(w, err)
+		return
+	}
+
+	httputil.OK(w, res)
+}
+
 // @Summary Logout user
 // @Description Invalidates the user session token
 // @Tags SSO
@@ -91,4 +107,54 @@ func (h *SSOHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.OK(w, res)
+}
+
+func (h *SSOHandler) LogoutAll(w http.ResponseWriter, r *http.Request) {
+	var req domain.LogoutAllRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.Error(w, domain.ErrInvalidArgument)
+		return
+	}
+
+	_, err := h.uc.LogoutAll(r.Context(), req)
+	if err != nil {
+		httputil.Error(w, err)
+		return
+	}
+
+	httputil.NoContent(w)
+}
+
+// --- Admin: App Management ---
+
+func (h *SSOHandler) RegisterApp(w http.ResponseWriter, r *http.Request) {
+	var req domain.RegisterAppRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.Error(w, domain.ErrInvalidArgument)
+		return
+	}
+
+	res, err := h.uc.RegisterApp(r.Context(), req)
+	if err != nil {
+		httputil.Error(w, err)
+		return
+	}
+
+	httputil.Created(w, res)
+}
+
+func (h *SSOHandler) DeactivateApp(w http.ResponseWriter, r *http.Request) {
+	appID := r.PathValue("app_id")
+	if appID == "" {
+		httputil.Error(w, domain.ErrInvalidArgument)
+		return
+	}
+
+	_, err := h.uc.DeactivateApp(r.Context(), domain.DeactivateAppRequest{AppID: appID})
+	if err != nil {
+		httputil.Error(w, err)
+		return
+	}
+
+	httputil.NoContent(w)
 }

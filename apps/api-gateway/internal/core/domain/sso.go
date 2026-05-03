@@ -29,7 +29,13 @@ type LogoutRequest struct {
 
 type LogoutResponse struct{}
 
-type RefresgRequest struct {
+type LogoutAllRequest struct {
+	UserID string
+}
+
+type LogoutAllResponse struct{}
+
+type RefreshRequest struct {
 	RefreshToken string
 }
 

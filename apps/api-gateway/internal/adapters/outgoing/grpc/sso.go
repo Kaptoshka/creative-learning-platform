@@ -52,6 +52,23 @@ func (a *SSOAdapter) Login(
 	}, nil
 }
 
+func (a *SSOAdapter) Refresh(
+	ctx context.Context,
+	req domain.RefreshRequest,
+) (domain.RefreshResponse, error) {
+	res, err := a.client.Refresh(ctx, &ssov1.RefreshRequest{
+		RefreshToken: req.RefreshToken,
+	})
+	if err != nil {
+		return domain.RefreshResponse{}, mapGRPCError(err)
+	}
+
+	return domain.RefreshResponse{
+		AccessToken:  res.AccessToken,
+		RefreshToken: res.RefreshToken,
+	}, nil
+}
+
 func (a *SSOAdapter) Logout(
 	ctx context.Context,
 	req domain.LogoutRequest,
@@ -64,4 +81,48 @@ func (a *SSOAdapter) Logout(
 	}
 
 	return domain.LogoutResponse{}, nil
+}
+
+func (a *SSOAdapter) LogoutAll(
+	ctx context.Context,
+	req domain.LogoutAllRequest,
+) (domain.LogoutAllResponse, error) {
+	_, err := a.client.LogoutAll(ctx, &ssov1.LogoutAllRequest{
+		UserId: req.UserID,
+	})
+	if err != nil {
+		return domain.LogoutAllResponse{}, mapGRPCError(err)
+	}
+
+	return domain.LogoutAllResponse{}, nil
+}
+
+func (a *SSOAdapter) RegisterApp(
+	ctx context.Context,
+	req domain.RegisterAppRequest,
+) (domain.RegisterAppResponse, error) {
+	res, err := a.client.RegisterApp(ctx, &ssov1.RegisterAppRequest{
+		Name:        req.Name,
+		Secret:      req.Secret,
+		Description: req.Description,
+	})
+	if err != nil {
+		return domain.RegisterAppResponse{}, mapGRPCError(err)
+	}
+
+	return domain.RegisterAppResponse{AppID: res.AppId}, nil
+}
+
+func (a *SSOAdapter) DeactivateApp(
+	ctx context.Context,
+	req domain.DeactivateAppRequest,
+) (domain.DeactivateAppResponse, error) {
+	_, err := a.client.DeactivateApp(ctx, &ssov1.DeactivateAppRequest{
+		AppId: req.AppID,
+	})
+	if err != nil {
+		return domain.DeactivateAppResponse{}, mapGRPCError(err)
+	}
+
+	return domain.DeactivateAppResponse{}, nil
 }

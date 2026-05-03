@@ -29,6 +29,17 @@ func mapGRPCError(err error) error {
 		return domain.ErrAlreadyExists
 	case codes.InvalidArgument:
 		return domain.ErrInvalidArgument
+	case codes.FailedPrecondition:
+		msg := st.Message()
+		switch msg {
+		case "submission is not in progress":
+			return domain.ErrSubmissionClosed
+		case "submission is not submitted":
+			return domain.ErrSubmissionNotSubmitted
+		}
+		return domain.ErrInvalidArgument
+	case codes.OutOfRange:
+		return domain.ErrInvalidPageToken
 	default:
 		return domain.ErrInternal
 	}

@@ -80,6 +80,7 @@ func mustDial(
 ) (*grpc.ClientConn, error) {
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(grpcadapters.UnaryAuthInterceptor),
 	}
 
 	if !client.Insecure {

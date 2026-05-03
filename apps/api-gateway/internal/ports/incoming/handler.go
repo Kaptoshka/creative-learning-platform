@@ -5,7 +5,13 @@ import "net/http"
 type SSOHandler interface {
 	Register(w http.ResponseWriter, r *http.Request)
 	Login(w http.ResponseWriter, r *http.Request)
+	Refresh(w http.ResponseWriter, r *http.Request)
 	Logout(w http.ResponseWriter, r *http.Request)
+	LogoutAll(w http.ResponseWriter, r *http.Request)
+
+	// Admin only
+	RegisterApp(w http.ResponseWriter, r *http.Request)
+	DeactivateApp(w http.ResponseWriter, r *http.Request)
 }
 
 type AssignmentHandler interface {

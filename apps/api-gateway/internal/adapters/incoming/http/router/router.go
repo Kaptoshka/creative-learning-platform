@@ -26,8 +26,28 @@ func New(
 		mw.Public(http.HandlerFunc(sso.Login)),
 	)
 	mux.Handle(
+		"POST /api/v1/auth/refresh",
+		mw.Public(http.HandlerFunc(sso.Refresh)),
+	)
+
+	// --- SSO: need token ---
+	mux.Handle(
 		"POST /api/v1/auth/logout",
-		mw.Public(http.HandlerFunc(sso.Logout)),
+		mw.Protected(http.HandlerFunc(sso.Logout)),
+	)
+	mux.Handle(
+		"POST /api/v1/auth/logout-all",
+		mw.Protected(http.HandlerFunc(sso.LogoutAll)),
+	)
+
+	// --- SSO: admin only ---
+	mux.Handle(
+		"POST /api/v1/admin/apps",
+		mw.Protected(http.HandlerFunc(sso.RegisterApp)),
+	)
+	mux.Handle(
+		"POST /api/v1/admin/apps/{app_id}/deactivate",
+		mw.Protected(http.HandlerFunc(sso.DeactivateApp)),
 	)
 
 	// --- Assignments: Teacher — template management ---

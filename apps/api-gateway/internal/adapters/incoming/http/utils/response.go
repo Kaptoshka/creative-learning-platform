@@ -55,6 +55,14 @@ func domainErrToStatus(err error) int {
 		return http.StatusNotFound
 	case errors.Is(err, domain.ErrAlreadyExists):
 		return http.StatusConflict
+	case errors.Is(err, domain.ErrSubmissionClosed):
+		return http.StatusUnprocessableEntity
+	case errors.Is(err, domain.ErrSubmissionNotSubmitted):
+		return http.StatusUnprocessableEntity
+	case errors.Is(err, domain.ErrNoUpdates):
+		return http.StatusBadRequest
+	case errors.Is(err, domain.ErrInvalidPageToken):
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}
