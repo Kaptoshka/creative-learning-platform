@@ -18,31 +18,38 @@
 
         goCheck = pkgs.writeShellScriptBin "go-check" ''
           set -e
+          export PATH="${pkgs.go}/bin:${pkgs.golangci-lint}/bin:$PATH"
 
-          golangci-lint run --config=${./.golangci.yml}
+          export HOME=$TMPDIR
+          export GOCACHE=$TMPDIR/go-cache
+          export GOMODCACHE=$TMPDIR/go-mod-cache
+          export GOLANGCI_LINT_CACHE=$TMPDIR/golangci-lint-cache
+          export GOWORK=$PWD/go.work
+
+          # TODO: Add more modules for later pr's
+          golangci-lint run --config=${./.golangci.yml} ./apps/sso/...
         '';
 
         nixCheck = pkgs.writeShellScriptBin "nix-check" ''
           set -e
-
           echo "==> Nix format (alejandra)"
-          alejandra --check .
+          ${pkgs.alejandra}/bin/alejandra --check .
 
           echo "==> Static analysis"
-          statix check .
+          ${pkgs.statix}/bin/statix check .
 
           echo "==> Dead code"
-          deadnix --fail .
+          ${pkgs.deadnix}/bin/deadnix --fail .
         '';
 
         yamlCheck = pkgs.writeShellScriptBin "yaml-check" ''
           set -e
-          yamllint -c ${./.yamllint.yml} .
+          ${pkgs.yamllint}/bin/yamllint -c ${./.yamllint.yml} .
         '';
 
         protoCheck = pkgs.writeShellScriptBin "proto-check" ''
           set -e
-          buf lint ${./libs/protos}
+          ${pkgs.buf}/bin/buf lint ${./libs/protos}
         '';
 
         dockerCheck = pkgs.writeShellScriptBin "docker-check" ''
@@ -59,21 +66,26 @@
       in
       {
         checks = {
-          default = pkgs.runCommand "ci-check" { } ''
-            set -e
+          default =
+            pkgs.runCommand "ci-check"
+              {
+                src = ./.;
+              } ''
+              cp -r $src/. .
+              chmod -R +w .
 
-            echo "Running full CI checks..."
+              echo "Running full CI checks..."
 
-            ${goCheck}/bin/go-check
-            ${nixCheck}/bin/nix-check
-            ${yamlCheck}/bin/yaml-check
-            ${protoCheck}/bin/proto-check
-            ${dockerCheck}/bin/docker-check
-            ${composeCheck}/bin/compose-check
+              ${goCheck}/bin/go-check
+              ${nixCheck}/bin/nix-check
+              ${yamlCheck}/bin/yaml-check
+              ${protoCheck}/bin/proto-check
+              ${dockerCheck}/bin/docker-check
+              ${composeCheck}/bin/compose-check
 
-            echo "All checks passed"
-            touch $out
-          '';
+              echo "All checks passed"
+              touch $out
+            '';
 
           go = goCheck;
           nix = nixCheck;
