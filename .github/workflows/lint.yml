@@ -108,7 +108,7 @@ jobs:
                   input: "libs/protos"
 
     lint-dockerfile:
-        name: Dockerfile (hadoling)
+        name: Dockerfile (hadolint)
         needs: changes
         if: ${{ needs.changes.outputs.docker == 'true' }}
         runs-on: ubuntu-latest
