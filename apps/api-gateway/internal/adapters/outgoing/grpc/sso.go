@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
-	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/sso/v1"
+	ssov1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/sso/v1"
 )
 
 type SSOAdapter struct {
@@ -46,19 +46,22 @@ func (a *SSOAdapter) Login(
 		return domain.LoginResponse{}, mapGRPCError(err)
 	}
 
-	return domain.LoginResponse{Token: res.Token}, nil
+	return domain.LoginResponse{
+		AccessToken:  res.AccessToken,
+		RefreshToken: res.RefreshToken,
+	}, nil
 }
 
 func (a *SSOAdapter) Logout(
 	ctx context.Context,
 	req domain.LogoutRequest,
 ) (domain.LogoutResponse, error) {
-	res, err := a.client.Logout(ctx, &ssov1.LogoutRequest{
-		Token: req.Token,
+	_, err := a.client.Logout(ctx, &ssov1.LogoutRequest{
+		RefreshToken: req.RefreshToken,
 	})
 	if err != nil {
 		return domain.LogoutResponse{}, mapGRPCError(err)
 	}
 
-	return domain.LogoutResponse{Success: res.Success}, nil
+	return domain.LogoutResponse{}, nil
 }

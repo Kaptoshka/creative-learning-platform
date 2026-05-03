@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
-	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/assignments/v1"
+	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1"
 
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -189,9 +189,9 @@ func protoToVersionLight(v *assignmentsv1.SubmissionVersionLight) domain.Submiss
 		return domain.SubmissionVersionLight{}
 	}
 	return domain.SubmissionVersionLight{
-		ID: v.Id,
+		ID:            v.Id,
 		VersionNumber: v.VersionNumber,
-		CreatedAt: protoToTimeVal(v.CreatedAt),
+		CreatedAt:     protoToTimeVal(v.CreatedAt),
 	}
 }
 

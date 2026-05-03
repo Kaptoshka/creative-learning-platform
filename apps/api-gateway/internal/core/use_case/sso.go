@@ -64,7 +64,7 @@ func (uc *SSOUseCase) Login(
 			domain.ErrInvalidArgument,
 		)
 	}
-	if req.AppID == 0 {
+	if req.AppID == "" {
 		return domain.LoginResponse{}, fmt.Errorf(
 			"%w: app_id is required",
 			domain.ErrInvalidArgument,
@@ -78,7 +78,7 @@ func (uc *SSOUseCase) Logout(
 	ctx context.Context,
 	req domain.LogoutRequest,
 ) (domain.LogoutResponse, error) {
-	if req.Token == "" {
+	if req.RefreshToken == "" {
 		return domain.LogoutResponse{}, fmt.Errorf(
 			"%w: token is required",
 			domain.ErrInvalidArgument,

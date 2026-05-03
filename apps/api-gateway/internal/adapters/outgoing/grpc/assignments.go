@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/Kaptoshka/creative-learning-platform/gateway/internal/core/domain"
-	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/proto/assignments/v1"
+	assignmentsv1 "github.com/Kaptoshka/creative-learning-platform/libs/protos/gen/go/assignments/v1"
 
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )

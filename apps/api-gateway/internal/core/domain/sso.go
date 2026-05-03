@@ -9,23 +9,47 @@ type RegisterRequest struct {
 }
 
 type RegisterResponse struct {
-	UserID int64
+	UserID string
 }
 
 type LoginRequest struct {
 	Email    string
 	Password string
-	AppID    int32
+	AppID    string
 }
 
 type LoginResponse struct {
-	Token string
+	AccessToken  string
+	RefreshToken string
 }
 
 type LogoutRequest struct {
-	Token string
+	RefreshToken string
 }
 
-type LogoutResponse struct {
-	Success bool
+type LogoutResponse struct{}
+
+type RefresgRequest struct {
+	RefreshToken string
+}
+
+type RefreshResponse struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+type DeactivateAppRequest struct {
+	AppID string
+}
+
+type DeactivateAppResponse struct{}
+
+type RegisterAppRequest struct {
+	Name        string
+	Secret      string
+	Description string
+}
+
+type RegisterAppResponse struct {
+	AppID string
 }
