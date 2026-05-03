@@ -1,0 +1,51 @@
+---
+repos:
+    - repo: local
+      hooks:
+          - id: go-lint
+            name: Go lint
+            entry: golangci-lint run --config=.golangci.yml
+            language: system
+            pass_filenames: false
+
+          - id: nix-fmt
+            name: Alejandra format check
+            entry: alejandra --check .
+            language: system
+            files: \.nix$
+
+          - id: nix-format-fix
+            name: Alejandra format (auto-fix)
+            entry: alejandra .
+            language: system
+            files: \.nix$
+
+          - id: nix-lint
+            name: Nix static analysis
+            entry: statix check .
+            language: system
+            files: \.nix$
+
+          - id: deadnix
+            name: Dead nix check
+            entry: deadnix --fail .
+            language: system
+            files: \.nix$
+
+          - id: yaml-lint
+            name: YAML lint
+            entry: yamllint -c .yamllint.yml .
+            language: system
+            files: \.(yaml|yml)$
+
+          - id: docker-lint
+            name: Dockerfile lint
+            entry: bash -c 'find . -name Dockerfile -o -name Dockerfile.dev | xargs hadolint --config .hadolint.yaml'
+            language: system
+            files: Dockerfile(\.dev)?$
+
+          - id: compose-check
+            name: Docker compose check
+            entry: docker compose -f docker-compose.yml config
+            language: system
+            pass_filenames: false

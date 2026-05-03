@@ -44,8 +44,8 @@ formatters:
 
         gofumpt:
             module-path:
-                - github.com/Kaptoshka/creative-learning-platform/assignments
-                - github.com/Kaptoshka/creative-learning-platform/gateway
+                github.com/Kaptoshka/creative-learning-platform/assignments
+                github.com/Kaptoshka/creative-learning-platform/gateway
 
         golines:
             # Target maximum line length.

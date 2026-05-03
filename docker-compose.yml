@@ -1,0 +1,168 @@
+---
+x-assignments-build: &assignments-build
+    build:
+        context: .
+        dockerfile: apps/assignments/Dockerfile
+
+x-sso-build: &sso-build
+    build:
+        context: .
+        dockerfile: apps/sso/Dockerfile
+
+services:
+    postgres:
+        image: postgres:18-alpine
+        container_name: postgres
+        env_file:
+            - .env
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+        volumes:
+            - postgres_data:/var/lib/postgresql
+        ports:
+            - "5432:5432"
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+                ]
+            interval: 10s
+            timeout: 10s
+            retries: 15
+        networks:
+            - backend
+
+    migrate-sso:
+        <<: *sso-build
+        container_name: migrate-sso
+        env_file:
+            - apps/sso/.env
+        environment:
+            DB_HOST: postgres
+            DB_PORT: 5432
+            MIGRATIONS_PATH: /migrations
+        entrypoint: ["/bin/migrator"]
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - backend
+
+    sso-service:
+        <<: *sso-build
+        container_name: sso-service
+        env_file:
+            - apps/sso/.env
+        environment:
+            CONFIG_PATH: /app/config/config.yaml
+            DB_HOST: postgres
+            DB_PORT: 5432
+        entrypoint: ["/bin/sso"]
+        volumes:
+            - ./apps/sso/config:/app/config:ro
+        depends_on:
+            migrate-sso:
+                condition: service_completed_successfully
+            postgres:
+                condition: service_healthy
+        networks:
+            - backend
+        healthcheck:
+            test: ["CMD", "/bin/grpc_health_probe", "-addr=:50051"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 5s
+
+    migrate-assignments:
+        <<: *assignments-build
+        container_name: migrate-assignments
+        env_file:
+            - apps/assignments/.env
+        environment:
+            DB_HOST: postgres
+            DB_PORT: 5432
+            MIGRATIONS_PATH: /migrations
+        entrypoint: ["/bin/migrator"]
+        depends_on:
+            postgres:
+                condition: service_healthy
+            migrate-sso:
+                condition: service_completed_successfully
+        networks:
+            - backend
+
+    assignment-service:
+        <<: *assignments-build
+        container_name: assignment-service
+        env_file:
+            - apps/assignments/.env
+        environment:
+            CONFIG_PATH: /app/config/config.yaml
+            DB_HOST: postgres
+            DB_PORT: 5432
+            JWT_JWKS_URL: http://sso-service:8080/.well-known/jwks.json
+        entrypoint: ["/bin/assignments"]
+        volumes:
+            - ./apps/assignments/config:/app/config:ro
+        depends_on:
+            migrate-assignments:
+                condition: service_completed_successfully
+            postgres:
+                condition: service_healthy
+            sso-service:
+                condition: service_healthy
+        networks:
+            - backend
+
+    gateway-service:
+        build:
+            context: .
+            dockerfile: apps/gateway/Dockerfile
+        container_name: gateway-service
+        env_file:
+            - apps/gateway/.env
+        environment:
+            CONFIG_PATH: /app/config/config.yaml
+            ASSIGNMENT_SERVICE_ADDR: assignment-service:50052
+            SSO_SERVICE_ADDR: sso-service:50051
+        volumes:
+            - ./apps/gateway/config:/app/config:ro
+        ports:
+            - "8000:8000"
+        depends_on:
+            assignment-service:
+                condition: service_started
+            sso-service:
+                condition: service_started
+        networks:
+            - backend
+            - frontend
+
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        container_name: frontend
+        env_file:
+            - frontend/.env
+        environment:
+            API_URL: http://gateway-service:8000
+        ports:
+            - "3000:3000"
+        depends_on:
+            - gateway-service
+        networks:
+            - frontend
+
+volumes:
+    postgres_data:
+
+networks:
+    backend:
+        driver: bridge
+    frontend:
+        driver: bridge

@@ -1,3 +1,6 @@
-INSERT INTO apps (id, name, secret)
-VALUES (1, 'test', 'test-secret')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO apps (name, secret, description)
+VALUES (
+    'test-app',
+    'test-secret',
+    'Test application for integration tests'
+) ON CONFLICT DO NOTHING;

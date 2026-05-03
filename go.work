@@ -1,8 +1,8 @@
 go 1.26.1
 
 use (
-	./apps/api-gateway
+	./apps/gateway
 	./apps/sso
 	./apps/assignments
-	./libs/gen/go
+	./libs/protos
 )
