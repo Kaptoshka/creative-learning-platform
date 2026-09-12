@@ -1,4 +1,5 @@
 export const config = {
-    ssoAPIURL: process.env.BUN_PUBLIC_SSO_API_URL || "http://localhost:8080",
-    appId: process.env.BUN_PUBLIC_APP_ID || "1",
+    APIURL: import.meta.env?.VITE_API_URL || "/api/v1",
+    appId:
+        import.meta.env?.VITE_APP_ID || "019df672-85cf-7f3a-b3ea-eb60c1efd6e0",
 };

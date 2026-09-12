@@ -9,6 +9,8 @@ import axios from "axios";
 import Button from "@/components/Button";
 import styles from "./AuthPage.module.scss";
 import { config } from "@/config";
+import { authApi } from "@/shared/api";
+import { useAuth } from "@/hooks/useAuth";
 
 const AuthPage = () => {
     const [mode, setMode] = useState("login");
@@ -22,7 +24,7 @@ const AuthPage = () => {
     const [middleName, setMiddleName] = useState("");
 
     const [isLoading, setIsLoading] = useState(false);
-    const { login } = useContext(AuthContext);
+    const { login } = useAuth();
     const navigate = useNavigate();
     const alert = useAlert();
 
@@ -68,57 +70,39 @@ const AuthPage = () => {
         }
 
         try {
-            let response;
             if (mode === "login") {
-                response = await axios.post(`${config.ssoAPIURL}/auth/login`, {
+                const { access_token, refresh_token } = await authApi.login({
                     email: email.trim(),
                     password: password.trim(),
                     app_id: +config.appId,
                 });
-            } else {
-                response = await axios.post(
-                    `${config.ssoAPIURL}/auth/register`,
-                    {
-                        email: email.trim(),
-                        password: password.trim(),
-                        first_name: firstName.trim(),
-                        last_name: lastName.trim(),
-                        ...(middleName.trim() && {
-                            middle_name: middleName.trim(),
-                        }),
-                    },
-                );
-            }
 
-            if (response.data) {
-                if (response.data.token) {
-                    login(response.data.token);
-                    navigate("/tasks", { viewTransition: true });
-                } else if (response.data.user_id) {
-                    alert.success("Аккаунт создан. Войдите в систему.");
-                    navigate("/auth", { viewTransition: true });
-                } else {
-                    alert.error(
-                        "Не удалось получить токен от сервера.",
-                        "Ошибка входа",
-                    );
-                }
+                login(access_token, refresh_token);
+                navigate("/tasks", { viewTransition: true });
             } else {
-                alert.error(
-                    "Не удалось получить токен от сервера.",
-                    "Ошибка входа",
-                );
+                await authApi.register({
+                    email: email.trim(),
+                    password: password.trim(),
+                    first_name: firstName.trim(),
+                    last_name: lastName.trim(),
+                    ...(middleName.trim() && {
+                        middle_name: middleName.trim(),
+                    }),
+                });
+
+                alert.success("Аккаунт создан. Войдите в систему.");
+                handleModeSwitch();
             }
         } catch (err) {
-            if (err.response && err.response.data && err.response.data.error) {
+            if (axios.isAxiosError(err) && err.response?.data?.error) {
                 alert.error(err.response.data.error, "Ошибка");
             } else {
                 alert.error(
                     "Проверьте данные или подключение к сети.",
-                    "Ошибка входа",
+                    "Ошибка",
                 );
             }
-            console.error("login failed: ", err);
+            console.error("auth failed:", err);
         } finally {
             setIsLoading(false);
         }
