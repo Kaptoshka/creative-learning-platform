@@ -54,3 +54,19 @@ lint-compose:
 
 gen-proto:
 	buf generate libs/protos --template libs/protos/buf.gen.yaml
+
+.PHONY: compose-dev-up
+compose-dev-up:
+	docker compose -f docker-compose.dev.yml up --build
+
+.PHONY: compose-dev-restart
+compose-dev-restart:
+	docker compose -f docker-compose.dev.yml restart
+
+.PHONY: compose-dev-logs
+compose-dev-logs:
+	docker compose -f docker-compose.dev.yml logs -f
+
+.PHONY: compose-dev-stop
+compose-dev-stop:
+	docker compose -f docker-compose.dev.yml down
