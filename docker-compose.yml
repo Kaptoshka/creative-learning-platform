@@ -1,13 +1,9 @@
 ---
-x-assignments-build: &assignments-build
-    build:
-        context: .
-        dockerfile: apps/assignments/Dockerfile
+x-assignments-image: &assignments-image
+    image: ghcr.io/kaptoshka/creative-learning-platform/assignments:${IMAGE_TAG:-latest}
 
-x-sso-build: &sso-build
-    build:
-        context: .
-        dockerfile: apps/sso/Dockerfile
+x-sso-image: &sso-image
+    image: ghcr.io/kaptoshka/creative-learning-platform/sso:${IMAGE_TAG:-latest}
 
 x-logging: &default-logging
     driver: "json-file"
@@ -57,8 +53,56 @@ services:
         networks:
             - backend
 
+    postgres-backup:
+        image: prodrigestivill/postgres-backup-local:18-alpine
+        <<: [*restart-policy, *security-opts]
+        environment:
+            POSTGRES_HOST: postgres
+            POSTGRES_USER_FILE: /run/secrets/postgres_user
+            POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+            POSTGRES_DB: sso_db,assignments_db
+            SCHEDULE: "@daily"
+            BACKUP_KEEP_DAYS: 7
+            BACKUP_KEEP_WEEKS: 4
+            BACKUP_KEEP_MONTHS: 6
+            HEALTHCHECK_PORT: 8080
+        secrets:
+            - postgres_user
+            - postgres_password
+        volumes:
+            - postgres_backups:/backups
+        depends_on:
+            postgres:
+                condition: service_healthy
+        logging: *default-logging
+        networks:
+            - backend
+
+    backup-uploader:
+        image: amazon/aws-cli:2.17.62
+        <<: [*restart-policy, *security-opts]
+        entrypoint: ["/bin/sh", "-c"]
+        command:
+            - |
+                while true; do
+                  aws s3 sync /backups s3://${BACKUP_S3_BUCKET}/postgres/ --delete
+                  sleep 3600
+                done
+        environment:
+            AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY}
+            AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_KEY}
+            AWS_DEFAULT_REGION: ${BACKUP_S3_REGION:-us-east-1}
+            AWS_ENDPOINT_URL: ${BACKUP_S3_ENDPOINT}
+        volumes:
+            - postgres_backups:/backups:ro
+        depends_on:
+            - postgres_backup
+        logging: *default-logging
+        networks:
+            - backend
+
     migrate-sso:
-        <<: [*sso-build, *security-opts]
+        <<: [*sso-image, *security-opts]
         env_file:
             - apps/sso/.env
         environment:
@@ -75,7 +119,7 @@ services:
             - backend
 
     sso-service:
-        <<: [*sso-build, *restart-policy, *security-opts]
+        <<: [*sso-image, *restart-policy, *security-opts]
         env_file:
             - apps/sso/.env
         environment:
@@ -110,7 +154,7 @@ services:
             - backend
 
     migrate-assignments:
-        <<: [*assignments-build, *security-opts]
+        <<: [*assignments-image, *security-opts]
         env_file:
             - apps/assignments/.env
         environment:
@@ -129,7 +173,7 @@ services:
             - backend
 
     assignment-service:
-        <<: [*assignments-build, *restart-policy, *security-opts]
+        <<: [*assignments-image, *restart-policy, *security-opts]
         env_file:
             - apps/assignments/.env
         environment:
@@ -167,9 +211,7 @@ services:
 
     gateway-service:
         <<: [*restart-policy, *security-opts]
-        build:
-            context: .
-            dockerfile: apps/gateway/Dockerfile
+        image: ghcr.io/kaptoshka/creative-learning-platform/gateway:${IMAGE_TAG:-latest}
         env_file:
             - apps/gateway/.env
         environment:
@@ -216,9 +258,7 @@ services:
 
     frontend:
         <<: [*restart-policy, *security-opts]
-        build:
-            context: ./frontend
-            dockerfile: Dockerfile
+        image: ghcr.io/kaptoshka/creative-learning-platform/frontend:${IMAGE_TAG:-latest}
         env_file:
             - frontend/.env
         expose:
@@ -271,6 +311,7 @@ secrets:
 
 volumes:
     postgres_data:
+    postgres_backups:
     letsencrypt:
 
 networks:
