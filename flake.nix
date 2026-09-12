@@ -134,6 +134,8 @@
 
             jq
             yq
+
+            openssl
           ];
 
           shellHook = ''
