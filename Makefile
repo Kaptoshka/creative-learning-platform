@@ -70,3 +70,22 @@ compose-dev-logs:
 .PHONY: compose-dev-stop
 compose-dev-stop:
 	docker compose -f docker-compose.dev.yml down
+
+.PHONY: format
+format:
+	@make -j format-go format-nix format-proto
+
+.PHONY: format-go
+format-go:
+	@echo "==> Formatting Go..."
+	@gofmt -w $(GO_FILES)
+
+.PHONY: format-nix
+format-nix:
+	@echo "==> Formatting Nix..."
+	@nix run nixpkgs#nixpkgs-fmt -- .
+
+.PHONY: format-proto
+format-proto:
+	@echo "==> Formatting Protobuf..."
+	@buf format $(PROTO_DIR) --write
