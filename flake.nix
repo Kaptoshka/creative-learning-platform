@@ -97,6 +97,11 @@
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            bun
+            nodejs
+            typescript
+            typescript-language-server
+
             # git toolchain
             pre-commit
             git
@@ -129,6 +134,8 @@
 
             jq
             yq
+
+            openssl
           ];
 
           shellHook = ''

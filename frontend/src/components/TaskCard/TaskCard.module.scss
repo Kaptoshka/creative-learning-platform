@@ -1,0 +1,102 @@
+.task-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: var(--font-lg);
+        font-weight: 600;
+        color: var(--text-primary);
+        flex: 1;
+    }
+
+    &__status {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: var(--font-xs);
+        font-weight: 500;
+        margin-left: 12px;
+        white-space: nowrap;
+
+        &--available {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+        }
+
+        &--in_progress {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        &--completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+    }
+
+    &__description {
+        margin: 8px 0;
+        color: #666;
+        font-size: var(--font-sm);
+        line-height: 1.4;
+    }
+
+    &__prompt {
+        margin: 8px 0;
+        color: #888;
+        font-size: var(--font-xs);
+        line-height: 1.4;
+        font-style: italic;
+    }
+
+    &__footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid #f0f0f0;
+        margin-top: auto;
+    }
+
+    &__time {
+        display: flex;
+        align-items: center;
+        color: #666;
+        font-size: var(--font-xs);
+
+        &-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+        }
+    }
+
+    &__difficulty {
+        font-size: var(--font-xs);
+        color: #888;
+    }
+}

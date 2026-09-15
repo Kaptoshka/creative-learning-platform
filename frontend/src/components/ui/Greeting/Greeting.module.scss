@@ -1,0 +1,27 @@
+.greeting {
+  margin-bottom: 1.5rem;
+
+  &Title {
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  &Subtitle {
+    font-size: var(--font-base);
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  &Stats {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &Stat {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+  }
+}
