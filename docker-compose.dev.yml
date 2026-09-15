@@ -84,6 +84,7 @@ services:
     sso-service:
         <<: [*sso-build-dev, *restart-policy, *security-opts]
         container_name: sso-service-dev
+        profiles: ["sso", "assignments", "gateway", "frontend", "full"]
         env_file:
             - apps/sso/.env
         environment:
@@ -151,6 +152,7 @@ services:
     assignment-service:
         <<: [*assignments-build-dev, *restart-policy, *security-opts]
         container_name: assignment-service-dev
+        profiles: ["assignments", "gateway", "frontend", "full"]
         env_file:
             - apps/assignments/.env
         environment:
@@ -188,6 +190,7 @@ services:
     gateway-service:
         <<: [*gateway-build-dev, *restart-policy, *security-opts]
         container_name: gateway-service-dev
+        profiles: ["gateway", "frontend", "full"]
         env_file:
             - apps/gateway/.env
         environment:
@@ -231,6 +234,7 @@ services:
             context: ./frontend
             dockerfile: Dockerfile.dev
         container_name: frontend-dev
+        profiles: ["frontend", "full"]
         <<: [*restart-policy, *security-opts]
         env_file:
             - frontend/.env
